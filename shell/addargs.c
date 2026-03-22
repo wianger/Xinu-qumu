@@ -8,86 +8,83 @@
  *		  a command process that has been created by the shell
  *------------------------------------------------------------------------
  */
-status	addargs(
-	  pid32		pid,		/* ID of process to use		*/
-	  int32		ntok,		/* Count of arguments		*/
-	  int32		tok[],		/* Index of tokens in tokbuf	*/
-	  int32		tlen,		/* Length of data in tokbuf	*/
-	  char		*tokbuf,	/* Array of null-term. tokens	*/
-	  void 		*dummy		/* Dummy argument that was	*/
-					/*   used at creation and must	*/
-					/*   be replaced by a pointer	*/
-					/*   to an argument vector	*/
-	)
-{
-	intmask	mask;			/* Saved interrupt mask		*/
-	struct	procent *prptr;		/* Ptr to process' table entry	*/
-	uint32	aloc;			/* Argument location in process	*/
-					/*   stack as an integer	*/
-	uint32	*argloc;		/* Location in process's stack	*/
-					/*   to place args vector	*/
-	char	*argstr;		/* Location in process's stack	*/
-					/*   to place arg strings	*/
-	uint32	*search;		/* pointer that searches for	*/
-					/*   dummy argument on stack	*/
-	uint32	*aptr;			/* Walks through args array	*/
-	int32	i;			/* Index into tok array		*/
+status addargs(pid32 pid,    /* ID of process to use		*/
+               int32 ntok,   /* Count of arguments		*/
+               int32 tok[],  /* Index of tokens in tokbuf	*/
+               int32 tlen,   /* Length of data in tokbuf	*/
+               char *tokbuf, /* Array of null-term. tokens	*/
+               void *dummy   /* Dummy argument that was	*/
+                             /*   used at creation and must	*/
+                             /*   be replaced by a pointer	*/
+                             /*   to an argument vector	*/
+) {
+  intmask mask;          /* Saved interrupt mask		*/
+  struct procent *prptr; /* Ptr to process' table entry	*/
+  uint32 aloc;           /* Argument location in process	*/
+                         /*   stack as an integer	*/
+  uint32 *argloc;        /* Location in process's stack	*/
+                         /*   to place args vector	*/
+  char *argstr;          /* Location in process's stack	*/
+                         /*   to place arg strings	*/
+  uint32 *search;        /* pointer that searches for	*/
+                         /*   dummy argument on stack	*/
+  uint32 *aptr;          /* Walks through args array	*/
+  int32 i;               /* Index into tok array		*/
 
-	mask = disable();
+  mask = disable();
 
-	/* Check argument count and data length */
+  /* Check argument count and data length */
 
-	if ( (ntok <= 0) || (tlen < 0) ) {
-		restore(mask);
-		return SYSERR;
-	}
+  if ((ntok <= 0) || (tlen < 0)) {
+    restore(mask);
+    return SYSERR;
+  }
 
-	prptr = &proctab[pid];
+  prptr = &proctab[pid];
 
-	/* Compute lowest location in the process stack where the	*/
-	/*	args array will be stored followed by the argument	*/
-	/*	strings							*/
-	
-	aloc = (uint32) (prptr->prstkbase
-		- prptr->prstklen + sizeof(uint32));
-	argloc = (uint32*) ((aloc + 3) & ~0x3);	/* round multiple of 4	*/
+  /* Compute lowest location in the process stack where the	*/
+  /*	args array will be stored followed by the argument	*/
+  /*	strings							*/
 
-	/* Compute the first location beyond args array for the strings	*/
+  aloc = (uint32)(prptr->prstkbase - prptr->prstklen + sizeof(uint32));
+  argloc = (uint32 *)((aloc + 3) & ~0x3); /* round multiple of 4	*/
 
-	argstr = (char *) (argloc + (ntok+1));	/* +1 for a null ptr	*/
+  /* Compute the first location beyond args array for the strings	*/
 
-	/* Set each location in the args vector to be the address of	*/
-	/*	string area plus the offset of this argument		*/
+  argstr = (char *)(argloc + (ntok + 1)); /* +1 for a null ptr	*/
 
-	for (aptr=argloc, i=0; i < ntok; i++) {
-		*aptr++ = (uint32) (argstr + tok[i]);
-	}
+  /* Set each location in the args vector to be the address of	*/
+  /*	string area plus the offset of this argument		*/
 
-	/* Add a null pointer to the args array */
+  for (aptr = argloc, i = 0; i < ntok; i++) {
+    *aptr++ = (uint32)(argstr + tok[i]);
+  }
 
-	*aptr++ = (uint32)NULL;
+  /* Add a null pointer to the args array */
 
-	/* Copy the argument strings from tokbuf into process's	stack	*/
-	/*	just beyond the args vector				*/
+  *aptr++ = (uint32)NULL;
 
-	memcpy(aptr, tokbuf, tlen);
+  /* Copy the argument strings from tokbuf into process's	stack	*/
+  /*	just beyond the args vector				*/
 
-	/* Find the second argument in process's stack */
+  memcpy(aptr, tokbuf, tlen);
 
-	for (search = (uint32 *)prptr->prstkptr;
-	     search < (uint32 *)prptr->prstkbase; search++) {
+  /* Find the second argument in process's stack */
 
-		/* If found, replace with the address of the args vector*/
+  for (search = (uint32 *)prptr->prstkptr; search < (uint32 *)prptr->prstkbase;
+       search++) {
 
-		if (*search == (uint32)dummy) {
-			*search = (uint32)argloc;
-			restore(mask);
-			return OK;
-		}
-	}
+    /* If found, replace with the address of the args vector*/
 
-	/* Argument value not found on the stack - report an error */
+    if (*search == (uint32)dummy) {
+      *search = (uint32)argloc;
+      restore(mask);
+      return OK;
+    }
+  }
 
-	restore(mask);
-	return SYSERR;
+  /* Argument value not found on the stack - report an error */
+
+  restore(mask);
+  return SYSERR;
 }

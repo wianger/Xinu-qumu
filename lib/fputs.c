@@ -7,16 +7,13 @@ extern int putc(int, char);
  *			  Return result of last putc.
  *------------------------------------------------------------------------
  */
-int	fputs(
-	  char		*s,		/* string to write		*/
-	  int		dev		/* device to write to		*/
-	)
-{
-    int r = 0, c;
+int fputs(char *s, /* string to write		*/
+          int dev  /* device to write to		*/
+) {
+  int r = 0, c;
 
-    while ((c = (*s++)))
-    {
-        r = putc(dev, c);
-    }
-    return r;
+  while ((c = (*s++))) {
+    r = putc(dev, c);
+  }
+  return r;
 }

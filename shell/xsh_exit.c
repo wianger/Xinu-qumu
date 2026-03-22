@@ -7,7 +7,4 @@
  *------------------------------------------------------------------------
  */
 
-shellcmd xsh_exit(int nargs, char *args[])
-{
-	return SHELL_EXIT;
-}
+shellcmd xsh_exit(int nargs, char *args[]) { return SHELL_EXIT; }

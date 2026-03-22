@@ -7,13 +7,11 @@
  *------------------------------------------------------------------------
  */
 
-devcall	ramopen (
-	 struct	dentry	*devptr,	/* Entry in device switch table	*/
-	 char	*name,			/* Unused for a ram disk	*/
-	 char	*mode			/* Unused for a ram disk	*/
-	)
-{
-	/* No action -- just return the device descriptor */
+devcall ramopen(struct dentry *devptr, /* Entry in device switch table	*/
+                char *name,            /* Unused for a ram disk	*/
+                char *mode             /* Unused for a ram disk	*/
+) {
+  /* No action -- just return the device descriptor */
 
-	return devptr->dvnum;
+  return devptr->dvnum;
 }

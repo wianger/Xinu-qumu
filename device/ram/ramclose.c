@@ -6,9 +6,7 @@
  * Ramclose  -  Close a ram disk
  *------------------------------------------------------------------------
  */
-devcall	ramclose (
-	  struct dentry	*devptr		/* Entry in device switch table	*/
-	)
-{
-	return OK;
+devcall ramclose(struct dentry *devptr /* Entry in device switch table	*/
+) {
+  return OK;
 }

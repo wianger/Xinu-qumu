@@ -6,10 +6,8 @@
  *  gettime  -  Get xinu time in seconds past Jan 1, 1970
  *------------------------------------------------------------------------
  */
-status	gettime(
-	  uint32  *timvar		/* Location to store the result	*/
-	)
-{
+status gettime(uint32 *timvar /* Location to store the result	*/
+) {
 #if 0
 	uint32	now;			/* Current time (UCT)		*/
 	int32	retval;			/* Return value from call	*/
@@ -25,5 +23,5 @@ status	gettime(
 
 	*timvar = utim2ltim(now);
 #endif
-	return OK;
+  return OK;
 }

@@ -2,8 +2,8 @@
 
 extern int getc(int);
 
-#ifndef	EOF
-#define EOF      (-2)
+#ifndef EOF
+#define EOF (-2)
 #endif
 
 /*------------------------------------------------------------------------
@@ -11,18 +11,12 @@ extern int getc(int);
  *			  Return character read, EOF if error.
  *------------------------------------------------------------------------
  */
-int	fgetc(
-	  int		dev
-	)
-{
-    int result = (int)getc(dev);
+int fgetc(int dev) {
+  int result = (int)getc(dev);
 
-    if (0 > result)
-    {
-        return EOF;
-    }
-    else
-    {
-        return result;
-    }
+  if (0 > result) {
+    return EOF;
+  } else {
+    return result;
+  }
 }

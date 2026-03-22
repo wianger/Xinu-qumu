@@ -6,19 +6,14 @@
  * is on the second memory-mapped 16550 UART device.
  *------------------------------------------------------------------
  */
-int console_init(void)
-{
-	return OK;
-}
+int console_init(void) { return OK; }
 
 /*------------------------------------------------------------------
  * platinit - platform specific initialization for Galileo
  *------------------------------------------------------------------
  */
-void	platinit()
-{
+void platinit() {
 
-	/* Initialize the console serial port */
-	console_init();
-
+  /* Initialize the console serial port */
+  console_init();
 }

@@ -11,18 +11,15 @@ extern void _fdoprnt(char *, va_list, int (*)(did32, char), int);
  *			and -1 if an error occurred.
  *------------------------------------------------------------------------
  */
-int	fprintf(
-	  int		dev,		/* device to write to		*/
-	  char		*fmt,		/* format string		*/
-	  ...
-	)
-{
-    va_list ap;
-    int putc(did32, char);
+int fprintf(int dev,   /* device to write to		*/
+            char *fmt, /* format string		*/
+            ...) {
+  va_list ap;
+  int putc(did32, char);
 
-    va_start(ap, fmt);
-    _fdoprnt(fmt, ap, putc, dev);
-    va_end(ap);
+  va_start(ap, fmt);
+  _fdoprnt(fmt, ap, putc, dev);
+  va_end(ap);
 
-    return 0;
+  return 0;
 }

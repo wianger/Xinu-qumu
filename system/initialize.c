@@ -5,30 +5,30 @@
 #include <xinu.h>
 #include <string.h>
 
-extern	void	start(void);	/* Start of Xinu code			*/
-extern	void	*_end;		/* End of Xinu code			*/
+extern void start(void); /* Start of Xinu code			*/
+extern void *_end;       /* End of Xinu code			*/
 
 /* Function prototypes */
 
-extern	void main(void);	/* Main is the first process created	*/
-static	void sysinit(); 	/* Internal system initialization	*/
-extern	void meminit(void);	/* Initializes the free memory list	*/
-local	process startup(void);	/* Process to finish startup tasks	*/
+extern void main(void);      /* Main is the first process created	*/
+static void sysinit();       /* Internal system initialization	*/
+extern void meminit(void);   /* Initializes the free memory list	*/
+local process startup(void); /* Process to finish startup tasks	*/
 
 /* Declarations of major kernel variables */
 
-struct	procent	proctab[NPROC];	/* Process table			*/
-struct	sentry	semtab[NSEM];	/* Semaphore table			*/
-struct	memblk	memlist;	/* List of free memory blocks		*/
+struct procent proctab[NPROC]; /* Process table			*/
+struct sentry semtab[NSEM];    /* Semaphore table			*/
+struct memblk memlist;         /* List of free memory blocks		*/
 
 /* Active system status */
 
-int	prcount;		/* Total number of live processes	*/
-pid32	currpid;		/* ID of currently executing process	*/
+int prcount;   /* Total number of live processes	*/
+pid32 currpid; /* ID of currently executing process	*/
 
 /* Control sequence to reset the console colors and cusor positiion	*/
 
-#define	CONSOLE_RESET	" \033[0m\033[2J\033[;H"
+#define CONSOLE_RESET " \033[0m\033[2J\033[;H"
 
 /*------------------------------------------------------------------------
  * nulluser - initialize the system and become the null process
@@ -44,58 +44,51 @@ pid32	currpid;		/* ID of currently executing process	*/
  *------------------------------------------------------------------------
  */
 
-void	nulluser()
-{	
-	struct	memblk	*memptr;	/* Ptr to memory block		*/
-	uint32	free_mem;		/* Total amount of free memory	*/
-	
-	/* Initialize the system */
+void nulluser() {
+  struct memblk *memptr; /* Ptr to memory block		*/
+  uint32 free_mem;       /* Total amount of free memory	*/
 
-	sysinit();
+  /* Initialize the system */
 
-	/* Output Xinu memory layout */
-	free_mem = 0;
-	for (memptr = memlist.mnext; memptr != NULL;
-						memptr = memptr->mnext) {
-		free_mem += memptr->mlength;
-	}
-	
-	kprintf("%10d bytes of free memory.  Free list:\n", free_mem);
-	for (memptr=memlist.mnext; memptr!=NULL;memptr = memptr->mnext) {
-	    kprintf("           [0x%08X to 0x%08X]\n",
-		(uint32)memptr, ((uint32)memptr) + memptr->mlength - 1);
-	}
+  sysinit();
 
-	kprintf("%10d bytes of Xinu code.\n",
-		(uint32)&etext - (uint32)&text);
-	kprintf("           [0x%08X to 0x%08X]\n",
-		(uint32)&text, (uint32)&etext - 1);
-	kprintf("%10d bytes of data.\n",
-		(uint32)&ebss - (uint32)&data);
-	kprintf("           [0x%08X to 0x%08X]\n\n",
-		(uint32)&data, (uint32)&ebss - 1);
+  /* Output Xinu memory layout */
+  free_mem = 0;
+  for (memptr = memlist.mnext; memptr != NULL; memptr = memptr->mnext) {
+    free_mem += memptr->mlength;
+  }
 
-	/* Enable interrupts */
+  kprintf("%10d bytes of free memory.  Free list:\n", free_mem);
+  for (memptr = memlist.mnext; memptr != NULL; memptr = memptr->mnext) {
+    kprintf("           [0x%08X to 0x%08X]\n", (uint32)memptr,
+            ((uint32)memptr) + memptr->mlength - 1);
+  }
 
-	enable();
+  kprintf("%10d bytes of Xinu code.\n", (uint32)&etext - (uint32)&text);
+  kprintf("           [0x%08X to 0x%08X]\n", (uint32)&text, (uint32)&etext - 1);
+  kprintf("%10d bytes of data.\n", (uint32)&ebss - (uint32)&data);
+  kprintf("           [0x%08X to 0x%08X]\n\n", (uint32)&data,
+          (uint32)&ebss - 1);
 
-	/* Create a process to finish startup and start main */
+  /* Enable interrupts */
 
-	resume(create((void *)startup, INITSTK, INITPRIO,
-					"Startup process", 0, NULL));
+  enable();
 
-	/* Become the Null process (i.e., guarantee that the CPU has	*/
-	/*  something to run when no other process is ready to execute)	*/
+  /* Create a process to finish startup and start main */
 
-	while (TRUE) {
+  resume(
+      create((void *)startup, INITSTK, INITPRIO, "Startup process", 0, NULL));
 
-		/* Halt until there is an external interrupt */
+  /* Become the Null process (i.e., guarantee that the CPU has	*/
+  /*  something to run when no other process is ready to execute)	*/
 
-		asm volatile ("hlt");
-	}
+  while (TRUE) {
 
+    /* Halt until there is an external interrupt */
+
+    asm volatile("hlt");
+  }
 }
-
 
 /*------------------------------------------------------------------------
  *
@@ -104,18 +97,15 @@ void	nulluser()
  *
  *------------------------------------------------------------------------
  */
-local process	startup(void)
-{
-	/* Create a process to execute function main() */
+local process startup(void) {
+  /* Create a process to execute function main() */
 
-	resume(create((void *)main, INITSTK, INITPRIO,
-					"Main process", 0, NULL));
+  resume(create((void *)main, INITSTK, INITPRIO, "Main process", 0, NULL));
 
-	/* Startup process exits at this point */
+  /* Startup process exits at this point */
 
-	return OK;
+  return OK;
 }
-
 
 /*------------------------------------------------------------------------
  *
@@ -123,97 +113,94 @@ local process	startup(void)
  *
  *------------------------------------------------------------------------
  */
-static	void	sysinit()
-{
-	int32	i;
-	struct	procent	*prptr;		/* Ptr to process table entry	*/
-	struct	sentry	*semptr;	/* Ptr to semaphore table entry	*/
+static void sysinit() {
+  int32 i;
+  struct procent *prptr; /* Ptr to process table entry	*/
+  struct sentry *semptr; /* Ptr to semaphore table entry	*/
 
-	/* Platform Specific Initialization */
+  /* Platform Specific Initialization */
 
-	platinit();
+  platinit();
 
-	/* Reset the console */
+  /* Reset the console */
 
-	kprintf(CONSOLE_RESET);
-	kprintf("\n%s\n\n", VERSION);
+  kprintf(CONSOLE_RESET);
+  kprintf("\n%s\n\n", VERSION);
 
-	/* Initialize the interrupt vectors */
+  /* Initialize the interrupt vectors */
 
-	initevec();
-	
-	/* Initialize free memory list */
-	
-	meminit();
+  initevec();
 
-	/* Initialize system variables */
+  /* Initialize free memory list */
 
-	/* Count the Null process as the first process in the system */
+  meminit();
 
-	prcount = 1;
+  /* Initialize system variables */
 
-	/* Scheduling is not currently blocked */
+  /* Count the Null process as the first process in the system */
 
-	Defer.ndefers = 0;
+  prcount = 1;
 
-	/* Initialize process table entries free */
+  /* Scheduling is not currently blocked */
 
-	for (i = 0; i < NPROC; i++) {
-		prptr = &proctab[i];
-		prptr->prstate = PR_FREE;
-		prptr->prname[0] = NULLCH;
-		prptr->prstkbase = NULL;
-		prptr->prprio = 0;
-	}
+  Defer.ndefers = 0;
 
-	/* Initialize the Null process entry */	
+  /* Initialize process table entries free */
 
-	prptr = &proctab[NULLPROC];
-	prptr->prstate = PR_CURR;
-	prptr->prprio = 0;
-	strncpy(prptr->prname, "prnull", 7);
-	prptr->prstkbase = getstk(NULLSTK);
-	prptr->prstklen = NULLSTK;
-	prptr->prstkptr = 0;
-	currpid = NULLPROC;
-	
-	/* Initialize semaphores */
+  for (i = 0; i < NPROC; i++) {
+    prptr = &proctab[i];
+    prptr->prstate = PR_FREE;
+    prptr->prname[0] = NULLCH;
+    prptr->prstkbase = NULL;
+    prptr->prprio = 0;
+  }
 
-	for (i = 0; i < NSEM; i++) {
-		semptr = &semtab[i];
-		semptr->sstate = S_FREE;
-		semptr->scount = 0;
-		semptr->squeue = newqueue();
-	}
+  /* Initialize the Null process entry */
 
-	/* Initialize buffer pools */
+  prptr = &proctab[NULLPROC];
+  prptr->prstate = PR_CURR;
+  prptr->prprio = 0;
+  strncpy(prptr->prname, "prnull", 7);
+  prptr->prstkbase = getstk(NULLSTK);
+  prptr->prstklen = NULLSTK;
+  prptr->prstkptr = 0;
+  currpid = NULLPROC;
 
-	bufinit();
+  /* Initialize semaphores */
 
-	/* Create a ready list for processes */
+  for (i = 0; i < NSEM; i++) {
+    semptr = &semtab[i];
+    semptr->sstate = S_FREE;
+    semptr->scount = 0;
+    semptr->squeue = newqueue();
+  }
 
-	readylist = newqueue();
+  /* Initialize buffer pools */
 
-	/* Initialize the real time clock */
+  bufinit();
 
-	clkinit();
+  /* Create a ready list for processes */
 
-	for (i = 0; i < NDEVS; i++) {
-		init(i);
-	}
-	return;
+  readylist = newqueue();
+
+  /* Initialize the real time clock */
+
+  clkinit();
+
+  for (i = 0; i < NDEVS; i++) {
+    init(i);
+  }
+  return;
 }
 
-int32	stop(char *s)
-{
-	kprintf("%s\n", s);
-	kprintf("looping... press reset\n");
-	while(1)
-		/* Empty */;
+int32 stop(char *s) {
+  kprintf("%s\n", s);
+  kprintf("looping... press reset\n");
+  while (1)
+    /* Empty */;
 }
 
-int32	delay(int n)
-{
-	DELAY(n);
-	return OK;
+int32 delay(int n) {
+  DELAY(n);
+  return OK;
 }

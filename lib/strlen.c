@@ -5,16 +5,14 @@
  *			counting the null byte.
  *------------------------------------------------------------------------
  */
-int	strlen(
-	  char		*str		/* string to use		*/
-	)
-{
-	int	len;
+int strlen(char *str /* string to use		*/
+) {
+  int len;
 
-	len = 0;
+  len = 0;
 
-	while(*str++ != '\0') {
-		len++;
-	}
-	return  len;
+  while (*str++ != '\0') {
+    len++;
+  }
+  return len;
 }

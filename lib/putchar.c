@@ -7,9 +7,4 @@
  *  putchar  -  C putchar function
  *------------------------------------------------------------------------
  */
-int	putchar(
-	  int		c
-	)
-{
-    return fputc(c, stdout);
-}
+int putchar(int c) { return fputc(c, stdout); }

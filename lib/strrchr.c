@@ -6,25 +6,20 @@
  *			char is not found
  *------------------------------------------------------------------------
  */
-char	*strrchr(
-	  const char	*s,		/* String to search		*/
-	  int		c		/* Character to locate		*/
-	)
-{
-    char *r = 0;
+char *strrchr(const char *s, /* String to search		*/
+              int c          /* Character to locate		*/
+) {
+  char *r = 0;
 
-    for (; *s != '\0'; s++)
-    {
-        if (*s == (const char)c)
-        {
-            r = (char *)s;
-        }
+  for (; *s != '\0'; s++) {
+    if (*s == (const char)c) {
+      r = (char *)s;
     }
+  }
 
-    if ((const char)c == *s)
-    {
-        return (char *)s;
-    }
+  if ((const char)c == *s) {
+    return (char *)s;
+  }
 
-    return r;
+  return r;
 }

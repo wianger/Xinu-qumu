@@ -7,15 +7,14 @@
  * xhs_argecho - display argecho message that lists shell commands
  *------------------------------------------------------------------------
  */
-shellcmd xsh_argecho(int nargs, char *args[])
-{
-	int32	i;
+shellcmd xsh_argecho(int nargs, char *args[]) {
+  int32 i;
 
-	printf("\n\nThe %d arguments are:\n", nargs);
-	for (i = 0; i < nargs; i++) {
-		printf("    %2d: %s\n", i, args[i]);
-	}
-	printf("\n");
+  printf("\n\nThe %d arguments are:\n", nargs);
+  for (i = 0; i < nargs; i++) {
+    printf("    %2d: %s\n", i, args[i]);
+  }
+  printf("\n");
 
-	return 0;
+  return 0;
 }

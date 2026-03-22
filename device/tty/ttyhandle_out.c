@@ -7,65 +7,64 @@
  *		     characters to the device FIFO (interrupts disabled)
  *------------------------------------------------------------------------
  */
-void	ttyhandle_out(
-	 struct	ttycblk	*typtr,		/* Ptr to ttytab entry		*/
-	 struct	uart_csreg *csrptr	/* Address of UART's CSRs	*/
-	)
-{
-	
-	int32	ochars;			/* Number of output chars sent	*/
-					/*   to the UART		*/
-	int32	avail;			/* Available chars in output buf*/
-	int32	uspace;			/* Space left in onboard UART	*/
-					/*   output FIFO		*/
-	byte 	ier = 0;
+void ttyhandle_out(
+    struct ttycblk *typtr,    /* Ptr to ttytab entry		*/
+    struct uart_csreg *csrptr /* Address of UART's CSRs	*/
+) {
 
-	/* If output is currently held, simply ignore the call */
+  int32 ochars; /* Number of output chars sent	*/
+                /*   to the UART		*/
+  int32 avail;  /* Available chars in output buf*/
+  int32 uspace; /* Space left in onboard UART	*/
+                /*   output FIFO		*/
+  byte ier = 0;
 
-	if (typtr->tyoheld) {
-		return;
-	}
+  /* If output is currently held, simply ignore the call */
 
-	/* If echo and output queues empty, turn off interrupts */
+  if (typtr->tyoheld) {
+    return;
+  }
 
-	if ( (typtr->tyehead == typtr->tyetail) &&
-	     (semcount(typtr->tyosem) >= TY_OBUFLEN) ) {
-		ier = inb((uint32)&csrptr->ier);
-		outb((uint32)&csrptr->ier, ier & ~UART_IER_ETBEI);
-		return;
-	}
-	
-	/* Initialize uspace to the size of the transmit FIFO */
+  /* If echo and output queues empty, turn off interrupts */
 
-	uspace = UART_FIFO_SIZE;
+  if ((typtr->tyehead == typtr->tyetail) &&
+      (semcount(typtr->tyosem) >= TY_OBUFLEN)) {
+    ier = inb((uint32)&csrptr->ier);
+    outb((uint32)&csrptr->ier, ier & ~UART_IER_ETBEI);
+    return;
+  }
 
-	/* While onboard FIFO is not full and the echo queue is	*/
-	/*   nonempty, xmit chars from the echo queue		*/
+  /* Initialize uspace to the size of the transmit FIFO */
 
-	while ( (uspace>0) &&  typtr->tyehead != typtr->tyetail) {
-		outb((uint32)&csrptr->buffer, *typtr->tyehead++);
-		if (typtr->tyehead >= &typtr->tyebuff[TY_EBUFLEN]) {
-			typtr->tyehead = typtr->tyebuff;
-		}
-		uspace--;
-	}
+  uspace = UART_FIFO_SIZE;
 
-	/* While onboard FIFO is not full and the output queue is	*/
-	/*   nonempty, transmit chars from the output queue		*/
+  /* While onboard FIFO is not full and the echo queue is	*/
+  /*   nonempty, xmit chars from the echo queue		*/
 
-	ochars = 0;
-	avail = TY_OBUFLEN - semcount(typtr->tyosem);
-	while ( (uspace>0) &&  (avail > 0) ) {
-		outb((uint32)&csrptr->buffer, *typtr->tyohead++);
-		if (typtr->tyohead >= &typtr->tyobuff[TY_OBUFLEN]) {
-			typtr->tyohead = typtr->tyobuff;
-		}
-		avail--;
-		uspace--;
-		ochars++;
-	}
-	if (ochars > 0) {
-		signaln(typtr->tyosem, ochars);
-	}
-	return;
+  while ((uspace > 0) && typtr->tyehead != typtr->tyetail) {
+    outb((uint32)&csrptr->buffer, *typtr->tyehead++);
+    if (typtr->tyehead >= &typtr->tyebuff[TY_EBUFLEN]) {
+      typtr->tyehead = typtr->tyebuff;
+    }
+    uspace--;
+  }
+
+  /* While onboard FIFO is not full and the output queue is	*/
+  /*   nonempty, transmit chars from the output queue		*/
+
+  ochars = 0;
+  avail = TY_OBUFLEN - semcount(typtr->tyosem);
+  while ((uspace > 0) && (avail > 0)) {
+    outb((uint32)&csrptr->buffer, *typtr->tyohead++);
+    if (typtr->tyohead >= &typtr->tyobuff[TY_OBUFLEN]) {
+      typtr->tyohead = typtr->tyobuff;
+    }
+    avail--;
+    uspace--;
+    ochars++;
+  }
+  if (ochars > 0) {
+    signaln(typtr->tyosem, ochars);
+  }
+  return;
 }

@@ -7,10 +7,8 @@
  * getutime  -  Obtain time in seconds past Jan 1, 1970, UCT (GMT)
  *------------------------------------------------------------------------
  */
-status	getutime(
-	  uint32  *timvar		/* Location to store the result	*/
-	)
-{
+status getutime(uint32 *timvar /* Location to store the result	*/
+) {
 #if 0
 	uint32	now;			/* Current time in xinu format	*/
 	int32	retval;			/* Return value from call	*/
@@ -86,5 +84,5 @@ status	getutime(
 	Date.dt_bootvalid = TRUE;
 	*timvar = now;
 #endif
-	return OK;
+  return OK;
 }
