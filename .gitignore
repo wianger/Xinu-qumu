@@ -22,6 +22,9 @@ config/lex.yy.c
 config/y.tab.c
 config/y.tab.h
 
+system/conf.c
+include/conf.h
+
 compile_commands.json
 .clangd/
 .cache/
