@@ -2,20 +2,18 @@
 
 #include <xinu.h>
 
-process main(void) {
-
-  /* Run the Xinu shell */
-
-  recvclr();
-  resume(create(shell, 8192, 50, "shell", 1, CONSOLE));
-
-  /* Wait for shell to exit and recreate it */
-
-  while (TRUE) {
-    receive();
-    sleepms(200);
-    kprintf("\n\nMain process recreating shell\n\n");
-    resume(create(shell, 4096, 20, "shell", 1, CONSOLE));
+void sndA(void) {
+  while (1) {
+    fputs("A\n", CONSOLE);
   }
-  return OK;
+}
+void sndB(void) {
+  while (1) {
+    fputs("B\n", CONSOLE);
+  }
+}
+
+void main(void) {
+  resume(create(sndA, 1024, 30, "process 1", 0));
+  resume(create(sndB, 1024, 30, "process 2", 0));
 }
