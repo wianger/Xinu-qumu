@@ -12,7 +12,8 @@ const struct cmdent cmdtab[] = {
     {"clear", TRUE, xsh_clear},      {"date", FALSE, xsh_date},
     {"devdump", FALSE, xsh_devdump}, {"echo", FALSE, xsh_echo},
     {"exit", TRUE, xsh_exit},        {"help", FALSE, xsh_help},
-    {"kill", TRUE, xsh_kill},        {"memdump", FALSE, xsh_memdump},
+    {"kill", TRUE, xsh_kill},        {"lab2", FALSE, xsh_lab2},
+    {"memdump", FALSE, xsh_memdump},
     {"memstat", FALSE, xsh_memstat}, {"ps", FALSE, xsh_ps},
     {"sleep", FALSE, xsh_sleep},     {"uptime", FALSE, xsh_uptime},
     {"?", FALSE, xsh_help}
