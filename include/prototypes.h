@@ -421,16 +421,16 @@ extern syscall yield(void);
 
 /* in file xsh_lab2.c */
 extern syscall k2023202316_delay_runv(int32, void *, uint32, ...);
-extern pid32 fork(void);
-extern void exec(void *, pri16, char *, uint32, ...);
+extern pid32 k2023202316_fork(void);
+extern void k2023202316_exec(void *, pri16, char *, uint32, ...);
 
 #define K2023202316_VA_NARGS_IMPL(_0, _1, _2, _3, _4, _5, N, ...) N
 #define K2023202316_VA_NARGS(...)                                            \
   K2023202316_VA_NARGS_IMPL(_, ##__VA_ARGS__, 5, 4, 3, 2, 1, 0)
 
-#define delay_run(seconds, func, ...)                                        \
+#define k2023202316_delay_run(seconds, func, ...)                            \
   k2023202316_delay_runv((seconds), (void *)(func),                          \
-                        K2023202316_VA_NARGS(__VA_ARGS__), ##__VA_ARGS__)
+                         K2023202316_VA_NARGS(__VA_ARGS__), ##__VA_ARGS__)
 
 /* NETWORK BYTE ORDER CONVERSION NOT NEEDED ON A BIG-ENDIAN COMPUTER */
 #define htons(x) ((0xff & ((x) >> 8)) | ((0xff & (x)) << 8))

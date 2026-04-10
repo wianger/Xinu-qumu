@@ -18,6 +18,7 @@ struct k2023202316_fork_state {
 };
 
 local void k2023202316_copy_stdio(pid32);
+local void k2023202316_detach_process(pid32);
 local void k2023202316_set_name(struct procent *, char *);
 local void k2023202316_wait_for(pid32);
 local void k2023202316_fix_ebp_chain(uint32, uint32, uint32, uint32);
@@ -119,21 +120,21 @@ syscall k2023202316_delay_runv(int32 seconds, void *func, uint32 nargs, ...) {
   }
 
   k2023202316_copy_stdio(pid);
+  k2023202316_detach_process(pid);
   resume(pid);
   return OK;
 }
 
 /*------------------------------------------------------------------------
- * fork - clone the current execution context onto a new stack
+ * k2023202316_fork - clone the current execution context onto a new stack
  *
- * This implementation stays within Xinu's existing scheduler/process model:
  * a short-lived helper runs after the caller has been context-switched once,
  * copies the saved stack segment, and repairs the saved ebp chain so the child
  * can continue from the same call path. It intentionally does not scan stack
  * contents and rewrite pointer-like integers.
  *------------------------------------------------------------------------
  */
-pid32 fork(void) {
+pid32 k2023202316_fork(void) {
   struct k2023202316_fork_state state;
   pid32 helper;
   pri16 helper_prio;
@@ -146,17 +147,16 @@ pid32 fork(void) {
   }
 
   helper_prio = proctab[currpid].prprio + 1;
-  helper = create((void *)u2023202316_fork_helper, K2023202316_FORK_HELPER_STACK,
-                  helper_prio, "lab2-forkh", 2, currpid, (uint32)&state);
+  helper =
+      create((void *)u2023202316_fork_helper, K2023202316_FORK_HELPER_STACK,
+             helper_prio, "lab2-forkh", 2, currpid, (uint32)&state);
   if (helper == SYSERR) {
     semdelete(state.done);
     return SYSERR;
   }
 
   k2023202316_copy_stdio(helper);
-
-  /* Keep the helper's exit notification off the caller's message slot. */
-  proctab[helper].prparent = helper;
+  k2023202316_detach_process(helper);
   resume(helper);
 
   if (state.role == 0) {
@@ -169,10 +169,11 @@ pid32 fork(void) {
 }
 
 /*------------------------------------------------------------------------
- * exec - replace the current process context
+ * k2023202316_exec - replace the current process context
  *------------------------------------------------------------------------
  */
-void exec(void *funcaddr, pri16 priority, char *name, uint32 nargs, ...) {
+void k2023202316_exec(void *funcaddr, pri16 priority, char *name, uint32 nargs,
+                      ...) {
   va_list ap;
   int32 args[9];
   struct procent *prptr;
@@ -258,21 +259,21 @@ local status k2023202316_run_all(void) {
 }
 
 /*------------------------------------------------------------------------
- * k2023202316_run_delay_demo - test asynchronous delay_run
+ * k2023202316_run_delay_demo - test asynchronous k2023202316_delay_run
  *------------------------------------------------------------------------
  */
 local status k2023202316_run_delay_demo(void) {
   printf("\n[lab2] delay_run demo\n");
   printf("xsh_lab2(1): %d.%d\n", clktime, count1000);
-  if (delay_run(2, u2023202316_delay_test, 11, 22, 33) == SYSERR) {
+  if (k2023202316_delay_run(2, u2023202316_delay_test, 11, 22, 33) == SYSERR) {
     printf("delay_run call 1 failed\n");
     return SYSERR;
   }
-  if (delay_run(4, u2023202316_delay_test_one, 44) == SYSERR) {
+  if (k2023202316_delay_run(4, u2023202316_delay_test_one, 44) == SYSERR) {
     printf("delay_run call 2 failed\n");
     return SYSERR;
   }
-  if (delay_run(6, u2023202316_delay_test, 55, 66, 77) == SYSERR) {
+  if (k2023202316_delay_run(6, u2023202316_delay_test, 55, 66, 77) == SYSERR) {
     printf("delay_run call 3 failed\n");
     return SYSERR;
   }
@@ -339,6 +340,22 @@ local void k2023202316_copy_stdio(pid32 pid) {
   for (i = 0; i < NDESC; i++) {
     proctab[pid].prdesc[i] = proctab[currpid].prdesc[i];
   }
+}
+
+/*------------------------------------------------------------------------
+ * k2023202316_detach_process - keep internal workers off caller msg slots
+ *------------------------------------------------------------------------
+ */
+local void k2023202316_detach_process(pid32 pid) {
+  if (isbadpid(pid)) {
+    return;
+  }
+
+  /*
+   * These helper/worker processes are fire-and-forget internal machinery;
+   * they should not consume the parent's single-message completion channel.
+   */
+  proctab[pid].prparent = pid;
 }
 
 /*------------------------------------------------------------------------
@@ -589,7 +606,7 @@ local process k2023202316_exec_bootstrap(char *oldstkbase, uint32 oldstklen,
 local process u2023202316_fork_case(void) {
   pid32 pid;
 
-  pid = fork();
+  pid = k2023202316_fork();
   if (pid == SYSERR) {
     printf("fork failed\n");
     return SYSERR;
@@ -609,11 +626,11 @@ local process u2023202316_fork_case(void) {
 local process u2023202316_exec_case(void) {
   pid32 pid;
 
-  pid = fork();
+  pid = k2023202316_fork();
   if (pid == 0) {
-    exec((void *)u2023202316_exec_target,
-         proctab[currpid].prprio + K2023202316_EXEC_PRIO_BONUS,
-         "exec-child", 2, 2023, currpid);
+    k2023202316_exec((void *)u2023202316_exec_target,
+                     proctab[currpid].prprio + K2023202316_EXEC_PRIO_BONUS,
+                     "exec-child", 2, 2023, currpid);
     printf("exec returned unexpectedly in pid %d\n", currpid);
     return SYSERR;
   }
