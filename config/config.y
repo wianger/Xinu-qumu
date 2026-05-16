@@ -126,6 +126,7 @@ void	devonid(char *);
 void	getattrid(char *);
 void	newdev(char *);
 int	newtype(char *);
+int	yylex(void);
 void	yyerror(char *);
 
 
