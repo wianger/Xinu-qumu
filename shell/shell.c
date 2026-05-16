@@ -13,6 +13,7 @@ const struct cmdent cmdtab[] = {
     {"devdump", FALSE, xsh_devdump}, {"echo", FALSE, xsh_echo},
     {"exit", TRUE, xsh_exit},        {"help", FALSE, xsh_help},
     {"kill", TRUE, xsh_kill},        {"lab2", FALSE, xsh_lab2},
+    {"lab3", FALSE, xsh_lab3}, // Lab3 2023202316
     {"memdump", FALSE, xsh_memdump},
     {"memstat", FALSE, xsh_memstat}, {"ps", FALSE, xsh_ps},
     {"sleep", FALSE, xsh_sleep},     {"uptime", FALSE, xsh_uptime},
@@ -262,8 +263,16 @@ process shell(did32 dev /* ID of tty device from which	*/
 
     /* Spawn child thread for non-built-in commands */
 
-    child = create(cmdtab[j].cfunc, SHELL_CMDSTK, SHELL_CMDPRIO,
-                   cmdtab[j].cname, 2, ntok, &tmparg);
+    /*Lab3 2023202316: Begin*/
+    if (cmdtab[j].cfunc == xsh_lab3) {
+      child = k2023202316_create_user_proc(cmdtab[j].cfunc, SHELL_CMDSTK,
+                                           SHELL_CMDPRIO, cmdtab[j].cname, 2,
+                                           ntok, &tmparg);
+    } else {
+      child = create(cmdtab[j].cfunc, SHELL_CMDSTK, SHELL_CMDPRIO,
+                     cmdtab[j].cname, 2, ntok, &tmparg);
+    }
+    /*Lab3 2023202316: End*/
 
     /* If creation or argument copy fails, report error */
 

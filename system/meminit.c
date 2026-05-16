@@ -30,7 +30,7 @@ struct __attribute__((__packed__)) sd {
   unsigned char sd_hibase;
 };
 
-#define NGD 4 /* Number of global descriptor entries	*/
+#define NGD 7 /* Number of global descriptor entries	*/ // Lab3 2023202316
 #define FLAGS_GRANULARITY 0x80
 #define FLAGS_SIZE 0x40
 #define FLAGS_SETTINGS (FLAGS_GRANULARITY | FLAGS_SIZE)
@@ -74,6 +74,35 @@ struct sd gdt_copy[NGD] = {
         0xcf,
         0,
     },
+    /*Lab3 2023202316: Begin*/
+    /* 4th, User Code Segment */
+    {
+        0xffff,
+        0,
+        0,
+        0xfa,
+        0xcf,
+        0,
+    },
+    /* 5th, User Data Segment */
+    {
+        0xffff,
+        0,
+        0,
+        0xf2,
+        0xcf,
+        0,
+    },
+    /* 6th, Task State Segment */
+    {
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+    },
+    /*Lab3 2023202316: End*/
 };
 
 extern struct sd gdt[]; /* Global segment table			*/
@@ -203,6 +232,16 @@ void setsegs() {
   psd = &gdt_copy[3]; /* Kernel stack segment */
   psd->sd_lolimit = ds_end;
   psd->sd_hilim_fl = FLAGS_SETTINGS | ((ds_end >> 16) & 0xff);
+
+  /*Lab3 2023202316: Begin*/
+  psd = &gdt_copy[4]; /* User code segment */
+  psd->sd_lolimit = ds_end;
+  psd->sd_hilim_fl = FLAGS_SETTINGS | ((ds_end >> 16) & 0xff);
+
+  psd = &gdt_copy[5]; /* User data segment */
+  psd->sd_lolimit = ds_end;
+  psd->sd_hilim_fl = FLAGS_SETTINGS | ((ds_end >> 16) & 0xff);
+  /*Lab3 2023202316: End*/
 
   memcpy(gdt, gdt_copy, sizeof(gdt_copy));
 }

@@ -24,10 +24,24 @@ syscall kill(pid32 pid /* ID of process to kill	*/
   }
 
   send(prptr->prparent, pid);
-  for (i = 0; i < 3; i++) {
-    close(prptr->prdesc[i]);
+  /*Lab3 2023202316: Begin*/
+  if (!prptr->pr2023202316_isuser) {
+    for (i = 0; i < 3; i++) {
+      close(prptr->prdesc[i]);
+    }
+  }
+  /*Lab3 2023202316: End*/
+  /*Lab3 2023202316: Begin*/
+  if (prptr->pr2023202316_isuser &&
+      prptr->pr2023202316_ustkbase != NULL) {
+    freestk(prptr->pr2023202316_ustkbase, prptr->pr2023202316_ustklen);
+    prptr->pr2023202316_ustkbase = NULL;
+    prptr->pr2023202316_ustkptr = NULL;
+    prptr->pr2023202316_ustklen = 0;
   }
   freestk(prptr->prstkbase, prptr->prstklen);
+  prptr->pr2023202316_isuser = FALSE;
+  /*Lab3 2023202316: End*/
 
   switch (prptr->prstate) {
   case PR_CURR:

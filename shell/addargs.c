@@ -42,6 +42,33 @@ status addargs(pid32 pid,    /* ID of process to use		*/
 
   prptr = &proctab[pid];
 
+  /*Lab3 2023202316: Begin*/
+  if (prptr->pr2023202316_isuser) {
+    aloc = (uint32)(prptr->pr2023202316_ustkbase -
+                    prptr->pr2023202316_ustklen + sizeof(uint32));
+    argloc = (uint32 *)((aloc + 3) & ~0x3);
+    argstr = (char *)(argloc + (ntok + 1));
+
+    for (aptr = argloc, i = 0; i < ntok; i++) {
+      *aptr++ = (uint32)(argstr + tok[i]);
+    }
+    *aptr++ = (uint32)NULL;
+    memcpy(aptr, tokbuf, tlen);
+
+    for (search = (uint32 *)prptr->pr2023202316_ustkptr;
+         search < (uint32 *)prptr->pr2023202316_ustkbase; search++) {
+      if (*search == (uint32)dummy) {
+        *search = (uint32)argloc;
+        restore(mask);
+        return OK;
+      }
+    }
+
+    restore(mask);
+    return SYSERR;
+  }
+  /*Lab3 2023202316: End*/
+
   /* Compute lowest location in the process stack where the	*/
   /*	args array will be stored followed by the argument	*/
   /*	strings							*/

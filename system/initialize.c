@@ -153,6 +153,12 @@ static void sysinit() {
     prptr->prname[0] = NULLCH;
     prptr->prstkbase = NULL;
     prptr->prprio = 0;
+    /*Lab3 2023202316: Begin*/
+    prptr->pr2023202316_isuser = FALSE;
+    prptr->pr2023202316_ustkptr = NULL;
+    prptr->pr2023202316_ustkbase = NULL;
+    prptr->pr2023202316_ustklen = 0;
+    /*Lab3 2023202316: End*/
   }
 
   /* Initialize the Null process entry */
@@ -164,7 +170,15 @@ static void sysinit() {
   prptr->prstkbase = getstk(NULLSTK);
   prptr->prstklen = NULLSTK;
   prptr->prstkptr = 0;
+  /*Lab3 2023202316: Begin*/
+  prptr->pr2023202316_isuser = FALSE;
+  prptr->pr2023202316_ustkptr = NULL;
+  prptr->pr2023202316_ustkbase = NULL;
+  prptr->pr2023202316_ustklen = 0;
+  /*Lab3 2023202316: End*/
   currpid = NULLPROC;
+
+  k2023202316_init(); // Lab3 2023202316
 
   /* Initialize semaphores */
 

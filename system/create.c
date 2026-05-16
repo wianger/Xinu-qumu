@@ -40,6 +40,12 @@ pid32 create(void *funcaddr, /* Address of the function	*/
   prptr->prprio = priority;
   prptr->prstkbase = (char *)saddr;
   prptr->prstklen = ssize;
+  /*Lab3 2023202316: Begin*/
+  prptr->pr2023202316_isuser = FALSE;
+  prptr->pr2023202316_ustkptr = NULL;
+  prptr->pr2023202316_ustkbase = NULL;
+  prptr->pr2023202316_ustklen = 0;
+  /*Lab3 2023202316: End*/
   prptr->prname[PNMLEN - 1] = NULLCH;
   for (i = 0; i < PNMLEN - 1 && (prptr->prname[i] = name[i]) != NULLCH; i++)
     ;

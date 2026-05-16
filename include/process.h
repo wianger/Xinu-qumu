@@ -46,6 +46,12 @@ struct procent {       /* Entry in the process table		*/
   char *prstkptr;      /* Saved stack pointer			*/
   char *prstkbase;     /* Base of run time stack		*/
   uint32 prstklen;     /* Stack length in bytes		*/
+  /*Lab3 2023202316: Begin*/
+  bool8 pr2023202316_isuser;
+  char *pr2023202316_ustkptr;
+  char *pr2023202316_ustkbase;
+  uint32 pr2023202316_ustklen;
+  /*Lab3 2023202316: End*/
   char prname[PNMLEN]; /* Process name				*/
   sid32 prsem;         /* Semaphore on which process waits	*/
   pid32 prparent;      /* ID of the creating process		*/
