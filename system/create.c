@@ -46,6 +46,7 @@ pid32 create(void *funcaddr, /* Address of the function	*/
   prptr->pr2023202316_ustkbase = NULL;
   prptr->pr2023202316_ustklen = 0;
   /*Lab3 2023202316: End*/
+  k2023202316_init_proc_vm_fields(prptr); // Lab4 2023202316
   prptr->prname[PNMLEN - 1] = NULLCH;
   for (i = 0; i < PNMLEN - 1 && (prptr->prname[i] = name[i]) != NULLCH; i++)
     ;

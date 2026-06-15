@@ -56,6 +56,7 @@ int32 initevec() {
   for (i = 0; i < NID; i++) {
     set_evec(i, defevec[i]);
   }
+  set_evec(14, (uint32)k2023202316_page_fault_entry); // Lab4 2023202316
 
   /* Load the interrupt descriptor table */
 

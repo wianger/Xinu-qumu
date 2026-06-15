@@ -32,12 +32,8 @@ syscall kill(pid32 pid /* ID of process to kill	*/
   }
   /*Lab3 2023202316: End*/
   /*Lab3 2023202316: Begin*/
-  if (prptr->pr2023202316_isuser &&
-      prptr->pr2023202316_ustkbase != NULL) {
-    freestk(prptr->pr2023202316_ustkbase, prptr->pr2023202316_ustklen);
-    prptr->pr2023202316_ustkbase = NULL;
-    prptr->pr2023202316_ustkptr = NULL;
-    prptr->pr2023202316_ustklen = 0;
+  if (prptr->pr2023202316_isuser) {
+    k2023202316_free_user_space(pid); // Lab4 2023202316
   }
   freestk(prptr->prstkbase, prptr->prstklen);
   prptr->pr2023202316_isuser = FALSE;

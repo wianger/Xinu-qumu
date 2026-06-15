@@ -38,6 +38,16 @@
 
 #define NDESC 5 /* must be odd to make procent 4N bytes	*/
 
+/*Lab4 2023202316: Begin*/
+#define K2023202316_MAX_UALLOCS 64
+
+struct k2023202316_ualloc {
+  uint32 base;
+  uint32 npages;
+  bool8 used;
+};
+/*Lab4 2023202316: End*/
+
 /* Definition of the process table (multiple of 32 bits) */
 
 struct procent {       /* Entry in the process table		*/
@@ -52,6 +62,15 @@ struct procent {       /* Entry in the process table		*/
   char *pr2023202316_ustkbase;
   uint32 pr2023202316_ustklen;
   /*Lab3 2023202316: End*/
+  /*Lab4 2023202316: Begin*/
+  uint32 pr2023202316_pdbr;
+  uint32 pr2023202316_ustacktop;
+  uint32 pr2023202316_ustackbase;
+  uint32 pr2023202316_ustackmax;
+  uint32 pr2023202316_uheapnext;
+  struct k2023202316_ualloc
+      pr2023202316_uallocs[K2023202316_MAX_UALLOCS];
+  /*Lab4 2023202316: End*/
   char prname[PNMLEN]; /* Process name				*/
   sid32 prsem;         /* Semaphore on which process waits	*/
   pid32 prparent;      /* ID of the creating process		*/

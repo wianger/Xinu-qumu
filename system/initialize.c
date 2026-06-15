@@ -134,6 +134,7 @@ static void sysinit() {
   /* Initialize free memory list */
 
   meminit();
+  k2023202316_vm_init(); // Lab4 2023202316
 
   /* Initialize system variables */
 
@@ -159,6 +160,7 @@ static void sysinit() {
     prptr->pr2023202316_ustkbase = NULL;
     prptr->pr2023202316_ustklen = 0;
     /*Lab3 2023202316: End*/
+    k2023202316_init_proc_vm_fields(prptr); // Lab4 2023202316
   }
 
   /* Initialize the Null process entry */
@@ -176,6 +178,7 @@ static void sysinit() {
   prptr->pr2023202316_ustkbase = NULL;
   prptr->pr2023202316_ustklen = 0;
   /*Lab3 2023202316: End*/
+  k2023202316_init_proc_vm_fields(prptr); // Lab4 2023202316
   currpid = NULLPROC;
 
   k2023202316_init(); // Lab3 2023202316

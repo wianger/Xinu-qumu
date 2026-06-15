@@ -192,6 +192,24 @@ void meminit(void) {
       next_block_length = (uint32)truncmb(mmap_addr->length);
     }
 
+    /*Lab4 2023202316: Begin*/
+    if ((uint32)next_memptr >= K2023202316_KERNEL_IDENT_LIMIT) {
+      mmap_addr =
+          (struct mbmregion *)((uint8 *)mmap_addr + mmap_addr->size + 4);
+      continue;
+    }
+    if (((uint32)next_memptr + next_block_length) >
+        K2023202316_KERNEL_IDENT_LIMIT) {
+      next_block_length =
+          (uint32)truncmb(K2023202316_KERNEL_IDENT_LIMIT - (uint32)next_memptr);
+    }
+    if (next_block_length == 0) {
+      mmap_addr =
+          (struct mbmregion *)((uint8 *)mmap_addr + mmap_addr->size + 4);
+      continue;
+    }
+    /*Lab4 2023202316: End*/
+
     /* Add then new block to the free list */
     memptr->mnext = next_memptr;
     memptr = memptr->mnext;

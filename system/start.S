@@ -151,6 +151,13 @@ mmap_search_no_overlap:
 	movl	4(%ecx), %eax		# Load memory address of segment
 	movl	12(%ecx), %ebx		# Load segment size
 	addl	%ebx, %eax		# Retrieve segment end
+	cmpl	$0x01000000, %eax	# Lab4 2023202316
+	jbe	mmap_search_stack_cap_done	# Lab4 2023202316
+	movl	$0x01000000, %eax	# Lab4 2023202316
+mmap_search_stack_cap_done:			# Lab4 2023202316
+	movl	4(%ecx), %ebx		# Lab4 2023202316
+	cmpl	%ebx, %eax		# Lab4 2023202316
+	jle	mmap_search_next_sgmt	# Lab4 2023202316
 	cmpl	%esp, %eax		# Compare segment and stack pointer
 	jl	mmap_search_next_sgmt	# Skip segment if less than
 	
