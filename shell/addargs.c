@@ -30,6 +30,7 @@ status addargs(pid32 pid,    /* ID of process to use		*/
                          /*   dummy argument on stack	*/
   uint32 *aptr;          /* Walks through args array	*/
   int32 i;               /* Index into tok array		*/
+  uint32 uargv[SHELL_MAXTOK + 1]; // Lab4 2023202316
 
   mask = disable();
 
@@ -44,21 +45,37 @@ status addargs(pid32 pid,    /* ID of process to use		*/
 
   /*Lab3 2023202316: Begin*/
   if (prptr->pr2023202316_isuser) {
-    aloc = (uint32)(prptr->pr2023202316_ustkbase -
-                    prptr->pr2023202316_ustklen + sizeof(uint32));
+    aloc = (uint32)(prptr->pr2023202316_ustackbase + sizeof(uint32));
     argloc = (uint32 *)((aloc + 3) & ~0x3);
     argstr = (char *)(argloc + (ntok + 1));
 
-    for (aptr = argloc, i = 0; i < ntok; i++) {
-      *aptr++ = (uint32)(argstr + tok[i]);
+    for (i = 0; i < ntok; i++) {
+      uargv[i] = (uint32)(argstr + tok[i]);
     }
-    *aptr++ = (uint32)NULL;
-    memcpy(aptr, tokbuf, tlen);
+    uargv[ntok] = (uint32)NULL;
+    if (k2023202316_copy_to_user(pid, (uint32)argloc, uargv,
+                                 (ntok + 1) * sizeof(uint32)) == SYSERR ||
+        k2023202316_copy_to_user(pid, (uint32)argstr, tokbuf, tlen) ==
+            SYSERR) {
+      restore(mask);
+      return SYSERR;
+    }
 
     for (search = (uint32 *)prptr->pr2023202316_ustkptr;
          search < (uint32 *)prptr->pr2023202316_ustkbase; search++) {
-      if (*search == (uint32)dummy) {
-        *search = (uint32)argloc;
+      uint32 word;
+      if (k2023202316_copy_from_user(pid, &word, (uint32)search,
+                                     sizeof(uint32)) == SYSERR) {
+        restore(mask);
+        return SYSERR;
+      }
+      if (word == (uint32)dummy) {
+        word = (uint32)argloc;
+        if (k2023202316_copy_to_user(pid, (uint32)search, &word,
+                                     sizeof(uint32)) == SYSERR) {
+          restore(mask);
+          return SYSERR;
+        }
         restore(mask);
         return OK;
       }

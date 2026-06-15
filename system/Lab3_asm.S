@@ -44,14 +44,9 @@ k2023202316_syscall_entry:
 		movw	%ax,%fs
 		movw	%ax,%gs
 
-		pushl	0(%ebp)
-		pushl	4(%ebp)
-		pushl	20(%ebp)
-		pushl	24(%ebp)
-		pushl	16(%ebp)
-		pushl	28(%ebp)
+		pushl	%ebp
 		call	k2023202316_syscall_dispatch
-		addl	$24,%esp
+		addl	$4,%esp
 		movl	%eax,28(%ebp)
 
 		movw	$K2023202316_UDATA_SEL,%ax

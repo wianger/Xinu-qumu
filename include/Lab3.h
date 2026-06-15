@@ -25,14 +25,15 @@
 #define K2023202316_SYS_RESUME 6
 #define K2023202316_SYS_RECEIVE 7
 
+struct k2023202316_trapframe; // Lab4 2023202316
+
 extern struct taskstate k2023202316_tss;
 
 extern void k2023202316_init(void);
 extern void k2023202316_set_tss_esp0(pid32);
 extern pid32 k2023202316_create_user_proc(void *, uint32, pri16, char *, uint32,
                                           ...);
-extern int32 k2023202316_syscall_dispatch(uint32, uint32, uint32, uint32,
-                                          uint32, uint32);
+extern int32 k2023202316_syscall_dispatch(struct k2023202316_trapframe *);
 extern void k2023202316_ltr(void);
 extern void k2023202316_iret_to_user(void *, void *);
 extern void k2023202316_syscall_entry(void);

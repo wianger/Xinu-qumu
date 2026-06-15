@@ -20,10 +20,8 @@ pid32 k2023202316_create_user_proc(void *funcaddr, uint32 ssize,
   uint32 i;
   va_list ap;
   uint32 args[K2023202316_MAX_UARGS];
-  uint32 *usaddr;
   char *kstkbase;
-  char *ustkbase;
-  char *uesp;
+  uint32 uesp;
 
   (void)ssize;
   (void)priority;
@@ -55,38 +53,40 @@ pid32 k2023202316_create_user_proc(void *funcaddr, uint32 ssize,
     return SYSERR;
   }
 
-  ustkbase = getstk(K2023202316_USER_STK);
-  if (ustkbase == (char *)SYSERR) {
-    freestk(kstkbase, K2023202316_KERNEL_STK);
-    restore(mask);
-    return SYSERR;
-  }
-
-  usaddr = (uint32 *)ustkbase;
-  *usaddr = STACKMAGIC;
-  for (i = nargs; i > 0; i--) {
-    *--usaddr = args[i - 1];
-  }
-  *--usaddr = (uint32)u2023202316_exit;
-  uesp = (char *)usaddr;
-
   prcount++;
   prptr = &proctab[pid];
   prptr->prstate = PR_SUSP;
   prptr->prprio = INITPRIO;
   prptr->prstkbase = kstkbase;
   prptr->prstklen = K2023202316_KERNEL_STK;
-  prptr->prstkptr =
-      k2023202316_build_kernel_stack(kstkbase, funcaddr, uesp);
   prptr->prsem = -1;
   prptr->prparent = (pid32)getpid();
   prptr->prhasmsg = FALSE;
   prptr->prmsg = 0;
   prptr->pr2023202316_isuser = TRUE;
-  prptr->pr2023202316_ustkptr = uesp;
-  prptr->pr2023202316_ustkbase = ustkbase;
-  prptr->pr2023202316_ustklen = K2023202316_USER_STK;
+  k2023202316_init_proc_vm_fields(prptr); // Lab4 2023202316
   k2023202316_set_name(prptr, name);
+
+  if (k2023202316_create_addrspace(pid) == 0 ||
+      k2023202316_map_user_stack(pid, K2023202316_USER_STK) == SYSERR) {
+    freestk(kstkbase, K2023202316_KERNEL_STK);
+    prptr->prstate = PR_FREE;
+    prcount--;
+    restore(mask);
+    return SYSERR;
+  }
+  uesp = k2023202316_build_user_stack(pid, (void *)u2023202316_exit, nargs,
+                                      args);
+  if (uesp == 0) {
+    k2023202316_free_user_space(pid);
+    freestk(kstkbase, K2023202316_KERNEL_STK);
+    prptr->prstate = PR_FREE;
+    prcount--;
+    restore(mask);
+    return SYSERR;
+  }
+  prptr->prstkptr =
+      k2023202316_build_kernel_stack(kstkbase, funcaddr, (char *)uesp);
 
   for (i = 0; i < NDESC; i++) {
     prptr->prdesc[i] = -1;

@@ -82,6 +82,43 @@ umsg32 u2023202316_receive(void) {
   return u2023202316_syscall(K2023202316_SYS_RECEIVE, 0, 0, 0, 0, 0);
 }
 
+pid32 u2023202316_fork(void) {
+  return u2023202316_syscall(K2023202316_SYS_FORK, 0, 0, 0, 0, 0);
+}
+
+void u2023202316_exec(void *funcaddr, pri16 priority, char *name, uint32 nargs,
+                      ...) {
+  va_list ap;
+  uint32 argv[K2023202316_MAX_UARGS + 1];
+  uint32 i;
+
+  if (nargs > K2023202316_MAX_UARGS) {
+    return;
+  }
+  argv[0] = nargs;
+  va_start(ap, nargs);
+  for (i = 1; i <= nargs; i++) {
+    argv[i] = va_arg(ap, uint32);
+  }
+  va_end(ap);
+  u2023202316_syscall(K2023202316_SYS_EXEC, (uint32)funcaddr,
+                      (uint32)priority, (uint32)name, 0, (uint32)argv);
+}
+
+void *u2023202316_umalloc(uint32 nbytes) {
+  return (void *)u2023202316_syscall(K2023202316_SYS_UMALLOC, nbytes, 0, 0, 0,
+                                     0);
+}
+
+syscall u2023202316_ufree(void *ptr) {
+  return u2023202316_syscall(K2023202316_SYS_UFREE, (uint32)ptr, 0, 0, 0, 0);
+}
+
+syscall u2023202316_getpname(pid32 pid, char *buf, uint32 len) {
+  return u2023202316_syscall(K2023202316_SYS_GETPNAME, (uint32)pid,
+                             (uint32)buf, len, 0, 0);
+}
+
 uint32 u2023202316_getcpl(void) {
   uint16 cs;
 

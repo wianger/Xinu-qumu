@@ -9,6 +9,7 @@
 
 local process u2023202316_uptest(int32, int32);
 local status u2023202316_run_uptest(char *, int32, int32);
+local void u2023202316_print_pname(pid32, char *);
 
 /*------------------------------------------------------------------------
  * xsh_lab3 - run experiment 3 user mode process tests
@@ -40,8 +41,10 @@ shellcmd xsh_lab3(int nargs, char *args[]) {
   }
 
   pid = u2023202316_getpid();
+  char pname[PNMLEN];
+  u2023202316_getpname(pid, pname, sizeof(pname));
   u2023202316_printf("xsh_lab3: pid=%d name=%s cpl=%d\n", pid,
-                     proctab[pid].prname, u2023202316_getcpl());
+                     pname, u2023202316_getcpl());
 
   result = OK;
   if (u2023202316_run_uptest("uptest-1", 2023, 16) == SYSERR) {
@@ -70,8 +73,7 @@ local status u2023202316_run_uptest(char *name, int32 a, int32 b) {
     return SYSERR;
   }
 
-  u2023202316_printf("created user proc pid=%d name=%s\n", pid,
-                     proctab[pid].prname);
+  u2023202316_print_pname(pid, "created user proc");
   if (u2023202316_resume(pid) == SYSERR) {
     u2023202316_printf("resume %s failed\n", name);
     return SYSERR;
@@ -88,8 +90,17 @@ local process u2023202316_uptest(int32 a, int32 b) {
   pid32 pid;
 
   pid = u2023202316_getpid();
-  u2023202316_printf("proc=%d name=%s: a=%d\n", pid, proctab[pid].prname, a);
+  char pname[PNMLEN];
+  u2023202316_getpname(pid, pname, sizeof(pname));
+  u2023202316_printf("proc=%d name=%s: a=%d\n", pid, pname, a);
   u2023202316_sleepms(10);
-  u2023202316_printf("proc=%d name=%s: b=%d\n", pid, proctab[pid].prname, b);
+  u2023202316_printf("proc=%d name=%s: b=%d\n", pid, pname, b);
   return OK;
+}
+
+local void u2023202316_print_pname(pid32 pid, char *prefix) {
+  char pname[PNMLEN];
+
+  u2023202316_getpname(pid, pname, sizeof(pname));
+  u2023202316_printf("%s pid=%d name=%s\n", prefix, pid, pname);
 }
