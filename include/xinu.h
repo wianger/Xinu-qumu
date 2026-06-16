@@ -5,6 +5,7 @@
 #include <process.h>
 #include <Lab3.h> // Lab3 2023202316
 #include <Lab4.h> // Lab4 2023202316
+#include <Lab5.h> // Lab5 2023202316
 #include <queue.h>
 #include <resched.h>
 #include <mark.h>

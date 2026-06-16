@@ -17,6 +17,14 @@ syscall kputc(byte c) /* Character to write	*/
   mask = disable();
 
   devptr = (struct dentry *)&devtab[CONSOLE];
+  /*Lab5 2023202316: Begin*/
+  if (devptr->dvputc ==
+      (devcall(*)(struct dentry *, char))k2023202316_vgaputc) {
+    k2023202316_vga_polled_putc(c);
+    restore(mask);
+    return OK;
+  }
+  /*Lab5 2023202316: End*/
   csrptr = (struct uart_csreg *)devptr->dvcsr;
 
   /* Fail if no console device was found */
@@ -61,6 +69,13 @@ syscall kgetc(void) {
   mask = disable();
 
   devptr = (struct dentry *)&devtab[CONSOLE];
+  /*Lab5 2023202316: Begin*/
+  if (devptr->dvgetc == (devcall(*)(struct dentry *))k2023202316_kbdgetc) {
+    c = (byte)k2023202316_kbd_polled_getc();
+    restore(mask);
+    return c;
+  }
+  /*Lab5 2023202316: End*/
   csrptr = (struct uart_csreg *)devptr->dvcsr;
 
   /* Fail if no console device was found */

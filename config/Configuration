@@ -32,6 +32,16 @@ tty:
 		-w ttywrite     -s ioerr        -n ttycontrol
 		-intr ttydispatch
 
+/*Lab5 2023202316: Begin*/
+/* type of a keyboard + VGA text console device */
+kbdvga:
+	on pc
+		-i k2023202316_kbdvgainit -o ionull       -c ionull
+		-r k2023202316_kbdvgaread -g k2023202316_kbdgetc -p k2023202316_vgaputc
+		-w k2023202316_kbdvgawrite -s ioerr       -n k2023202316_kbdvgactl
+		-intr k2023202316_kbddisp
+/*Lab5 2023202316: End*/
+
 /* type of ram disk */
 ram:
 	on mem
@@ -69,8 +79,13 @@ nam:
 /* Actual device declarations that each give the name of a device that	*/
 /*   will be present in the system					*/
 
-   /* Define the console device to be a tty and specify CSR*/
-   CONSOLE is tty  on uart  csr 0001770 -irq 0044
+   /*Lab5 2023202316: Begin*/
+   /* Define the console device to use the VGA screen and PS/2 keyboard */
+   CONSOLE is kbdvga on pc csr 0x0000 -irq 33
+
+   /* Keep the original serial tty available as a secondary device */
+   SERIAL0 is tty  on uart  csr 0001770 -irq 0044
+   /*Lab5 2023202316: End*/
 
    /* Define a null device */
    NULLDEV is null on nothing
