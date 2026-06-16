@@ -23,7 +23,6 @@ syscall kill(pid32 pid /* ID of process to kill	*/
     xdone();
   }
 
-  send(prptr->prparent, pid);
   /*Lab3 2023202316: Begin*/
   if (!prptr->pr2023202316_isuser) {
     for (i = 0; i < 3; i++) {
@@ -38,6 +37,7 @@ syscall kill(pid32 pid /* ID of process to kill	*/
   freestk(prptr->prstkbase, prptr->prstklen);
   prptr->pr2023202316_isuser = FALSE;
   /*Lab3 2023202316: End*/
+  send(prptr->prparent, pid); // Lab5 2023202316
 
   switch (prptr->prstate) {
   case PR_CURR:

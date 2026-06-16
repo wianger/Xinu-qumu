@@ -15,6 +15,7 @@ const struct cmdent cmdtab[] = {
     {"kill", TRUE, xsh_kill},        {"lab2", FALSE, xsh_lab2},
     {"lab3", FALSE, xsh_lab3}, // Lab3 2023202316
     {"lab4", FALSE, xsh_lab4}, // Lab4 2023202316
+    {"lab5", FALSE, xsh_lab5}, // Lab5 2023202316
     {"memdump", FALSE, xsh_memdump},
     {"memstat", FALSE, xsh_memstat}, {"ps", FALSE, xsh_ps},
     {"sleep", FALSE, xsh_sleep},     {"uptime", FALSE, xsh_uptime},
@@ -265,7 +266,8 @@ process shell(did32 dev /* ID of tty device from which	*/
     /* Spawn child thread for non-built-in commands */
 
     /*Lab3 2023202316: Begin*/
-    if (cmdtab[j].cfunc == xsh_lab3 || cmdtab[j].cfunc == xsh_lab4) {
+    if (cmdtab[j].cfunc == xsh_lab3 || cmdtab[j].cfunc == xsh_lab4 ||
+        cmdtab[j].cfunc == xsh_lab5) { // Lab5 2023202316
       child = k2023202316_create_user_proc(cmdtab[j].cfunc, SHELL_CMDSTK,
                                            SHELL_CMDPRIO, cmdtab[j].cname, 2,
                                            ntok, &tmparg);
