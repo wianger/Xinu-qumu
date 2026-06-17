@@ -105,6 +105,12 @@ int32 k2023202316_syscall_dispatch(struct k2023202316_trapframe *tf) {
   case K2023202316_SYS_GETPNAME:
     return k2023202316_getpname((pid32)a1, (char *)a2, a3);
 
+  case K2023202316_SYS_WRITEFILE: // Lab6 2023202316
+    return k2023202316_user_write_file((char *)a1, (char *)a2, a3);
+
+  case K2023202316_SYS_EXECFILE: // Lab6 2023202316
+    return k2023202316_execfile_from_user(tf, (char *)a1, a2, (char **)a3);
+
   default:
     return SYSERR;
   }

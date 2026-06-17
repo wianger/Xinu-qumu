@@ -28,6 +28,7 @@
 #define K2023202316_SYS_GETPNAME 12
 
 #define K2023202316_MAX_HIGH_FRAMES 32768
+#define K2023202316_VM_TRACE 0 // Lab6 2023202316
 
 struct k2023202316_trapframe {
   uint32 edi;
@@ -63,6 +64,8 @@ extern syscall k2023202316_reset_user_space(pid32);
 extern syscall k2023202316_free_user_space(pid32);
 extern syscall k2023202316_map_user_stack(pid32, uint32);
 extern uint32 k2023202316_build_user_stack(pid32, void *, uint32, uint32 *);
+extern syscall k2023202316_map_user_region(pid32, uint32, uint32,
+                                           char *); // Lab6 2023202316
 extern pid32 k2023202316_lab4_newpid(void);
 extern pid32 k2023202316_fork_from_trapframe(struct k2023202316_trapframe *);
 extern syscall k2023202316_exec_from_trapframe(struct k2023202316_trapframe *,

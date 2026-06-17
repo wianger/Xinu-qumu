@@ -27,11 +27,13 @@ VERSIONFILE	=	version
 LDSCRIPT	=	ld.script
 MKVERS		=	$(TOPDIR)/compile/bin/mkvers
 
+# Lab6 2023202316: REBUILDFLAGS includes device/lab6hd for the ATA disk.
 REBUILDFLAGS	=	-s $(TOPDIR)/system  debug.c		\
 			-s $(TOPDIR)/lib			\
 			-s $(TOPDIR)/device/tty			\
 			-s $(TOPDIR)/device/nam			\
 			-s $(TOPDIR)/device/ram			\
+			-s $(TOPDIR)/device/lab6hd		\
 			-s $(TOPDIR)/device/lfs			\
 			-s $(TOPDIR)/shell  
 

@@ -20,6 +20,14 @@ syscall write(did32 descrp, /* Descriptor for device	*/
     return SYSERR;
   }
   devptr = (struct dentry *)&devtab[descrp];
+  /*Lab6 2023202316: Begin*/
+#ifdef HD0
+  if (descrp == HD0) {
+    restore(mask);
+    return (*devptr->dvwrite)(devptr, buffer, count);
+  }
+#endif
+  /*Lab6 2023202316: End*/
   retval = (*devptr->dvwrite)(devptr, buffer, count);
   restore(mask);
   return retval;

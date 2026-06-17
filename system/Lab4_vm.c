@@ -37,6 +37,7 @@ local void k2023202316_set_name(struct procent *, char *);
 local void k2023202316_copy_desc(pid32, pid32);
 local char *k2023202316_addr_to_purpose(pid32, uint32);
 local uint32 k2023202316_alloc_low_page(char *, pid32, uint32);
+local bool8 k2023202316_is_kernel_user_mapping(uint32); // Lab6 2023202316
 
 /*------------------------------------------------------------------------
  * k2023202316_vm_init - initialize paging and high-memory frame allocator
@@ -149,11 +150,13 @@ uint32 k2023202316_alloc_frame(char *purpose, pid32 pid, uint32 vaddr) {
       k2023202316_frames[i].pid = pid;
       k2023202316_frames[i].vaddr = vaddr;
       k2023202316_copy_purpose(k2023202316_frames[i].purpose, purpose);
+#if K2023202316_VM_TRACE
       kprintf("Lab4 2023202316 alloc page phys=0x%08X no=%u pid=%d use=%s "
               "vaddr=0x%08X\n",
               k2023202316_frames[i].phys,
               k2023202316_frames[i].phys / K2023202316_PAGE_SIZE, pid,
               k2023202316_frames[i].purpose, vaddr);
+#endif
       return k2023202316_frames[i].phys;
     }
   }
@@ -175,9 +178,11 @@ void k2023202316_free_frame(uint32 phys, char *purpose, pid32 pid,
       if (!k2023202316_frames[i].used) {
         return;
       }
+#if K2023202316_VM_TRACE
       kprintf("Lab4 2023202316 free page phys=0x%08X no=%u pid=%d use=%s "
               "vaddr=0x%08X\n",
               phys, phys / K2023202316_PAGE_SIZE, pid, purpose, vaddr);
+#endif
       k2023202316_frames[i].used = FALSE;
       k2023202316_frames[i].pid = SYSERR;
       k2023202316_frames[i].vaddr = 0;
@@ -205,9 +210,11 @@ local uint32 k2023202316_alloc_low_page(char *purpose, pid32 pid,
     }
     phys = k2023202316_round_page((uint32)mem);
   }
+#if K2023202316_VM_TRACE
   kprintf("Lab4 2023202316 alloc low page phys=0x%08X no=%u pid=%d use=%s "
           "vaddr=0x%08X\n",
           phys, phys / K2023202316_PAGE_SIZE, pid, purpose, vaddr);
+#endif
   return phys;
 }
 
@@ -294,6 +301,46 @@ syscall k2023202316_map_user_stack(pid32 pid, uint32 nbytes) {
       K2023202316_USTACK_TOP - prptr->pr2023202316_ustackbase;
   return OK;
 }
+
+/*Lab6 2023202316: Begin*/
+syscall k2023202316_map_user_region(pid32 pid, uint32 vaddr, uint32 nbytes,
+                                    char *purpose) {
+  struct procent *prptr;
+  uint32 start;
+  uint32 end;
+  uint32 addr;
+  uint32 frame;
+
+  if (isbadpid(pid) || nbytes == 0) {
+    return SYSERR;
+  }
+  prptr = &proctab[pid];
+  start = vaddr & K2023202316_PAGE_MASK;
+  end = (vaddr + nbytes + K2023202316_PAGE_OFFSET) & K2023202316_PAGE_MASK;
+  if (end <= start || start < K2023202316_UHEAP_BASE ||
+      end > K2023202316_USTACK_TOP) {
+    return SYSERR;
+  }
+  for (addr = start; addr < end; addr += K2023202316_PAGE_SIZE) {
+    if (k2023202316_lookup_page(prptr->pr2023202316_pdbr, addr) &
+        K2023202316_PTE_P) {
+      continue;
+    }
+    frame = k2023202316_alloc_frame(purpose, pid, addr);
+    if (frame == 0) {
+      return SYSERR;
+    }
+    k2023202316_zero_frame(frame);
+    if (k2023202316_map_page(prptr->pr2023202316_pdbr, addr, frame,
+                             K2023202316_PTE_P | K2023202316_PTE_W |
+                                 K2023202316_PTE_U) == SYSERR) {
+      k2023202316_free_frame(frame, purpose, pid, addr);
+      return SYSERR;
+    }
+  }
+  return OK;
+}
+/*Lab6 2023202316: End*/
 
 uint32 k2023202316_build_user_stack(pid32 pid, void *retaddr, uint32 nargs,
                                     uint32 *args) {
@@ -472,16 +519,14 @@ syscall k2023202316_free_user_space(pid32 pid) {
       if (!(pte & K2023202316_PTE_P)) {
         continue;
       }
-      if (vaddr >= K2023202316_UHEAP_BASE &&
-          vaddr < K2023202316_USTACK_TOP) {
+      if (vaddr >= K2023202316_UHEAP_BASE && vaddr < K2023202316_USTACK_TOP) {
         k2023202316_free_frame(pte & K2023202316_PAGE_MASK,
                                k2023202316_addr_to_purpose(pid, vaddr), pid,
                                vaddr);
         pt[pti] = 0;
       }
     }
-    if ((pdi == (K2023202316_UHEAP_BASE >> 22)) ||
-        (pdi == ((K2023202316_USTACK_TOP - 1) >> 22))) {
+    if (!k2023202316_is_kernel_user_mapping(pdi << 22)) { // Lab6 2023202316
       k2023202316_free_frame(pde & K2023202316_PAGE_MASK, "user-pt", pid,
                              pdi << 22);
       pd[pdi] = 0;
@@ -727,8 +772,10 @@ int32 k2023202316_page_fault_handler(struct k2023202316_trapframe *tf,
     prptr->pr2023202316_ustackbase = vaddr;
     prptr->pr2023202316_ustklen =
         prptr->pr2023202316_ustacktop - prptr->pr2023202316_ustackbase;
+#if K2023202316_VM_TRACE
     kprintf("Lab4 2023202316 stack grow pid=%d vaddr=0x%08X\n", currpid,
             vaddr);
+#endif
     return TRUE;
   }
 
@@ -995,5 +1042,14 @@ local char *k2023202316_addr_to_purpose(pid32 pid, uint32 vaddr) {
   if (vaddr >= K2023202316_UHEAP_BASE && vaddr < K2023202316_UHEAP_LIMIT) {
     return "user-heap";
   }
+  if (vaddr >= K2023202316_ELF_BASE && vaddr < K2023202316_ELF_LIMIT) {
+    return "elf";
+  }
   return "user-page";
 }
+
+/*Lab6 2023202316: Begin*/
+local bool8 k2023202316_is_kernel_user_mapping(uint32 vaddr) {
+  return vaddr < K2023202316_UHEAP_BASE || vaddr >= K2023202316_USTACK_TOP;
+}
+/*Lab6 2023202316: End*/

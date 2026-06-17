@@ -82,5 +82,9 @@ extern shellcmd xsh_lab4(int32, char *[]); // Lab4 2023202316
 /* in file xsh_lab5.c */
 extern shellcmd xsh_lab5(int32, char *[]); // Lab5 2023202316
 
+/* in file xsh_lab6.c */
+extern shellcmd xsh_lab6_ls(int32, char *[]); // Lab6 2023202316
+extern shellcmd xsh_lab6_run(int32, char *[]); // Lab6 2023202316
+
 /* in file xsh_help.c */
 extern shellcmd xsh_help(int32, char *[]);

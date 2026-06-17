@@ -50,6 +50,16 @@ ram:
 		-w ramwrite	-s ioerr	-n ioerr
 		-intr ionull
 
+/*Lab6 2023202316: Begin*/
+/* type of a primary-channel slave ATA disk */
+lab6hd:
+	on pc
+		-i k2023202316_hdinit -o ionull -c ionull
+		-r k2023202316_hdread -g ioerr -p ioerr
+		-w k2023202316_hdwrite -s ioerr -n k2023202316_hdcontrol
+		-intr k2023202316_hddisp
+/*Lab6 2023202316: End*/
+
 /* type of a local file system master device */
 lfs:
 	on ram
@@ -95,6 +105,11 @@ nam:
    
    /* Define a ram disk device */
    RAM0 is ram on mem
+
+   /*Lab6 2023202316: Begin*/
+   /* QEMU loads fs_util/fs.img as the primary-channel slave disk */
+   HD0 is lab6hd on pc csr 0x01f0 -irq 46
+   /*Lab6 2023202316: End*/
 
    /* Define the local file system master device (one per system) */
 
