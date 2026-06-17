@@ -1,0 +1,2 @@
+This is a plain text file in the Lab6 disk image.
+Program B overwrites bytes at the beginning of a named file.
