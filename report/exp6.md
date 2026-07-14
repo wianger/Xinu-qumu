@@ -71,7 +71,7 @@ qemu-system-i386 -kernel compile/xinu.elf \
 | `device/lab6hd/hdhandler.c` | 硬盘 IRQ14 C 层处理函数，读取状态并唤醒等待进程。 |
 | `device/lab6hd/hddisp.S` | 硬盘 IRQ14 汇编入口，发送主片和从片 EOI，并在用户态返回前恢复用户数据段。 |
 | `device/lab6hd/hdcontrol.c` | 提供硬盘设备 `control` 入口，目前用于返回错误或保留扩展。 |
-| `system/Lab6.c` | 实现硬盘镜像文件系统解析、文件读写、用户态文件写入 syscall、外部 ELF 校验、映射、参数栈构造和 execfile。 |
+| `system/Lab6.c` | 实现硬盘镜像文件系统解析、边界校验、文件读写、用户态文件写入 syscall、外部 ELF 校验、映射、参数栈构造和 execfile。 |
 | `shell/xsh_lab6.c` | 实现 shell 命令 `xsh_lab6_ls` 和 `xsh_lab6_run`，分别注册为 `ls` 和 `run`。 |
 | `fs_util/A.c` | 外部用户程序 A，输出局部变量地址、`main` 地址、所有参数和学号姓名。 |
 | `fs_util/B.c` | 外部用户程序 B，将固定字符串写入指定文件的起始位置。 |
@@ -89,8 +89,8 @@ qemu-system-i386 -kernel compile/xinu.elf \
 | `system/Lab4_vm.c` | 增加通用用户页区域映射函数，调整释放逻辑，使外部 ELF 映射页能随进程退出释放。 |
 | `include/shprototypes.h` | 增加 `xsh_lab6_ls` 和 `xsh_lab6_run` 声明。 |
 | `shell/shell.c` | 注册 `ls` 和 `run` 命令；其中 `run` 与 `lab3/lab4/lab5` 一样作为用户态命令创建。 |
-| `system/Lab3_syscall.c` | 增加 `K2023202316_SYS_WRITEFILE` 和 `K2023202316_SYS_EXECFILE` 的系统调用分发。 |
-| `system/Lab3_userlib.c` | 增加 `u2023202316_writefile()` 和 `u2023202316_execfile()` 用户态封装。 |
+| `system/Lab3_syscall.c` | 增加 `K2023202316_SYS_WRITEFILE` 分发，并让既有 `K2023202316_SYS_EXEC` 支持文件形式。 |
+| `system/Lab3_userlib.c` | 增加 `u2023202316_writefile()`；`u2023202316_execfile()` 复用既有 exec 系统调用号。 |
 | `system/read.c`、`system/write.c` | 对 `HD0` 特判，避免通用 I/O 包装层在调用硬盘驱动期间一直关闭中断。 |
 | `fs_util/Makefile` | 增加 A/B 外部程序编译规则，把 `A`、`B`、`note.txt`、`A.c`、`B.c` 放入 `fs.img`。 |
 
@@ -225,6 +225,8 @@ struct _dir {
 
 本次测试环境中使用 64 位宿主机编译 `mkfs`，因此实际目录项大小为 144 字节。
 
+解析器还会验证目录项数量、文件偏移和文件长度均落在 500KB 镜像范围内。因此评分时向镜像加入更多合法文件可以正常枚举，损坏目录项也不会触发越界硬盘访问。
+
 ### 文件读写接口
 
 文件系统层提供四个主要接口：
@@ -266,7 +268,7 @@ LDFLAGS32 = -m elf_i386 -e main -Ttext 0x50001000
 
 ### `run` 的 fork + execfile 流程
 
-实验要求 `run` 通过用户态系统调用 `fork` 和 `exec` 完成外部命令加载。原实验 4 的 `exec` 接口接收的是内核内已有函数指针，不适合直接表达“从硬盘中的某个文件名加载 ELF”。因此本实验在保持 fork/exec 模式的基础上新增了 `execfile` 系统调用：
+实验要求 `run` 通过用户态系统调用 `fork` 和 `exec` 完成外部命令加载。原实验 4 的 `exec` 接口接收的是内核内已有函数指针，不适合直接表达“从硬盘中的某个文件名加载 ELF”。因此本实验增加 `u2023202316_execfile()` 用户态封装，并复用 `K2023202316_SYS_EXEC` 系统调用号；封装传入空入口地址，使内核分发器选择文件形式：
 
 ```c
 pid = u2023202316_fork();
@@ -288,7 +290,7 @@ if (pid == 0) {
 2. 从用户态复制 `argc` 和 `argv` 指针数组，再逐个复制参数字符串。
 3. 调用 `k2023202316_fs_find()` 查找目标文件，读取完整 ELF 到内核临时缓冲区。
 4. 校验 ELF magic、程序头大小、程序头范围、入口地址范围。
-5. 校验每个 `ELF_PROG_LOAD` 段的 `filesz <= memsz`，文件内偏移不越界，虚拟地址落在 `0x50000000-0x70000000`。
+5. 校验每个 `ELF_PROG_LOAD` 段的 `filesz <= memsz`，文件内偏移不越界，虚拟地址落在 `0x50000000-0x70000000`，并要求 ELF 入口实际位于非空可加载段内。
 6. 调用 `k2023202316_reset_user_space(currpid)` 清理子进程旧用户堆、栈、旧 ELF 映射等用户页。
 7. 对每个 loadable segment，按页调用 `k2023202316_map_user_region()` 映射用户页。
 8. 调用 `k2023202316_copy_to_user()` 把 ELF 文件中的段内容复制到用户虚拟地址。
@@ -498,7 +500,7 @@ run: cannot exec a
 - 实验 4：独立用户地址空间、`fork`、trapframe 中修改用户 `eip/useresp`、`copy_to_user` 和 `copy_from_user`。
 - 实验 5：VGA 文本模式输出和 PS/2 键盘输入，`CONSOLE` 已经切换为 VGA 键盘显示器。
 
-实验 6 对实验 4 的 `exec` 思路做了扩展。实验 4 的 `u2023202316_exec()` 适合跳转到内核镜像中已有的用户测试函数；实验 6 的外部程序位于硬盘镜像中，必须先按文件名读取 ELF、映射程序段、构造新用户栈。因此新增 `u2023202316_execfile()`，但使用方式仍是“父进程 fork，子进程 exec 替换自身映像”。
+实验 6 对实验 4 的 `exec` 思路做了扩展。实验 4 的 `u2023202316_exec()` 适合跳转到内核镜像中已有的用户测试函数；实验 6 的外部程序位于硬盘镜像中，必须先按文件名读取 ELF、映射程序段、构造新用户栈。`u2023202316_execfile()` 是同一个 `K2023202316_SYS_EXEC` 的用户态封装：入口参数为 `NULL` 时，分发器选择文件形式。使用方式仍是“父进程 fork，子进程 exec 替换自身映像”。
 
 ---
 
@@ -511,7 +513,7 @@ run: cannot exec a
 - 一次硬盘驱动调用读写一个 512 字节扇区，跨扇区读写由文件系统层拆分。
 - 外部程序参数最多 16 个，总字符串空间最多 512 字节。
 - 外部 ELF 的 loadable segment 必须落在 `0x50000000-0x70000000` 范围内。
-- `run` 使用新增 syscall `execfile` 表达“从文件 exec”，而不是复用实验 4 中接受函数指针的 `exec` 签名；其进程语义仍然是 fork 后在子进程中 exec。
+- `run` 通过 `u2023202316_execfile()` 表达“从文件 exec”，该封装复用实验 4 的 `K2023202316_SYS_EXEC`；其进程语义仍然是 fork 后在子进程中 exec。
 
 以上限制均不影响本实验要求中的 A/B 程序、`ls`、`run A hello world` 和 `run B note.txt` 测试。
 

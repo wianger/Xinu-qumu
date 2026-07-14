@@ -40,6 +40,7 @@
 | --- | --- |
 | `include/xinu.h` | 引入 `Lab4.h`，让 Lab4 接口对系统其他模块可见。 |
 | `include/process.h` | 增加用户页目录物理地址、用户栈边界、用户堆下一个分配地址、用户堆分配记录等字段。 |
+| `include/memory.h` | 声明链接脚本导出的内置用户代码段边界。 |
 | `include/Lab3.h` | 将系统调用分发函数改为接收 Lab4 trapframe，并继续保留 Lab3 用户态接口声明。 |
 | `include/shprototypes.h` | 增加 `xsh_lab4` 声明。 |
 | `shell/shell.c` | 注册 `lab4` 命令，并让 `lab3`/`lab4` 通过用户态进程创建函数启动。 |
@@ -55,6 +56,8 @@
 | `system/resched.c` | 进程切换时同步切换 `cr3`，使不同用户进程运行在各自页目录下。 |
 | `system/start.S` | 限制启动阶段 null 栈选择不超过 16MB，配合低端恒等映射。 |
 | `system/Lab3_asm.S` | 系统调用入口保存的寄存器现场现在直接作为 Lab4 trapframe 使用。 |
+| `compile/ld.script` | 将内核 `.text` 与允许 CPL3 执行的 `.usertext` 分离。 |
+| `compile/Makefile` | 增加 `-fno-pie`，保证内置用户入口使用链接后的绝对地址。 |
 
 ---
 
@@ -66,7 +69,7 @@
 
 1. `meminit()` 只把低于 `0x01000000` 的内存加入原 Xinu 空闲链表。
 2. `k2023202316_vm_init()` 扫描 multiboot memory map，将 `0x01000000` 以上可用页登记到 `k2023202316_frames[]`。
-3. 为内核创建页目录和页表，将 `0x00000000-0x01000000` 恒等映射。
+3. 为内核创建页目录和页表，将 `0x00000000-0x01000000` 恒等映射；其中只有 `.usertext` 页带 `PTE_U`，内核 `.text` 保持 supervisor-only。
 4. 在 `0xFFC00000` 建立 4 个临时映射槽，用于内核访问高端物理页。
 5. 写入 `cr3` 并设置 `cr0.PG`，开启分页。
 
@@ -86,12 +89,14 @@
 
 | 区域 | 虚拟地址范围 | 说明 |
 | --- | --- | --- |
-| 内核恒等映射 | `0x00000000-0x01000000` | 所有页目录共享，用于内核代码、数据和低端内存访问。 |
+| 内核恒等映射 | `0x00000000-0x01000000` | 所有页目录共享；内核 `.text` 仅 supervisor 可执行，`.usertext` 只读且允许 CPL3 执行。 |
 | 用户堆 | `0x40000000-0x40400000` | 实现扩展项堆分配；每次 `umalloc` 按页分配并记录。 |
 | 用户栈 | `0x7FFC0000-0x80000000` | 最大 4MB，初始映射 8KB，向低地址增长。 |
 | kmap 窗口 | `0xFFC00000` 起 4 页 | 内核临时映射高端物理页，供清零、复制、访问页目录/页表使用。 |
 
 用户栈顶固定为 `0x80000000`，初始映射 `0x7FFFF000` 和 `0x7FFFE000` 两页。若用户态访问低于当前栈底且不低于 `0x7FFC0000` 的地址，14 号页故障处理函数会分配 `stack-grow` 页并建立映射。
+
+链接脚本把用户库和用户态 shell 命令集中放入 `.usertext`，页表仅为该区间设置 `PTE_U` 且不设置 `PTE_W`。`k2023202316_create_user_proc()` 和内置形式的 `exec()` 也会检查入口是否位于该区间，防止用户进程直接跳入内核函数。实际边界由链接结果决定，可用 `nm -n compile/xinu.elf | grep usertext` 查看。
 
 ---
 
@@ -165,6 +170,7 @@ u2023202316_printf("xsh_lab4: pid=%d name=%s cpl=%d &x=0x%08X\n",
 | `lab4 2` | 只执行 fork 后子进程 exec 到新入口函数的测试。 |
 | `lab4 heap` | 执行用户态堆页分配、写入、释放和退出回收测试。 |
 | `lab4 stack` | 执行用户栈按需增长测试。 |
+| `lab4 map` | 保持当前用户地址空间，供 QEMU monitor 执行 `info mem`。 |
 | `lab4` | 顺序执行 fork、exec、heap、stack 全部测试。 |
 
 ---
@@ -189,7 +195,7 @@ u2023202316_printf("xsh_lab4: pid=%d name=%s cpl=%d &x=0x%08X\n",
 
 - `xsh_lab4` 输出 `cpl=3`，说明命令本身运行于用户态。
 - `&x=0x7FFFFFD8`，局部变量位于用户栈高地址区域。
-- fork 测试中父进程 PID 为 `1`、子进程 PID 为 `4`，二者输出同一个用户虚拟地址 `0x7FFFFFA8`。这说明 fork 后父子具有相同虚拟地址布局，但实际页框已经复制为子进程自己的 `fork-stack` 页。
+- fork 测试中父进程 PID 为 `1`、子进程 PID 为 `4`，二者输出同一个用户虚拟地址 `0x7FFFFFA8`。这说明 fork 后父子具有相同虚拟地址布局，但实际用户页已经复制到子进程自己的物理页框。
 - exec 测试中子进程先以 `lab4` 身份运行，然后释放旧地址空间并重新分配页目录、页表和用户栈，进入 `lab4-exec`，输出 `exec-target` 和参数 `(2023,16)`。
 
 ### 用户堆、栈增长和退出释放
@@ -209,11 +215,11 @@ u2023202316_printf("xsh_lab4: pid=%d name=%s cpl=%d &x=0x%08X\n",
 
 ### QEMU `info mem`
 
-在 QEMU monitor 中执行 `info mem`：
+执行 `lab4 map`，并在其映射检查窗口内切换到 QEMU monitor 执行 `info mem`：
 
 ![QEMU info mem 输出](imgs/exp4_info_mem.png)
 
-输出显示当前 CR3 下的低端内核恒等映射，以及 `0xFFC02000-0xFFC04000` 的 kmap 临时映射窗口。用户进程页的动态映射则由 Lab4 日志给出，例如：
+输出显示当前 CR3 下只有 `0x00115000-0x00117000` 的内置用户代码带 `u` 权限，其他低端内核恒等映射和 kmap 窗口均为 supervisor-only；`0x7FFFE000-0x80000000` 是 `lab4 map` 进程的独立用户栈。其他动态用户页也可由 Lab4 日志对应，例如：
 
 | 物理页 | 用途 | 用户逻辑地址 |
 | --- | --- | --- |
