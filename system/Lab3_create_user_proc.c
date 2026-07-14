@@ -26,9 +26,13 @@ pid32 k2023202316_create_user_proc(void *funcaddr, uint32 ssize,
   (void)ssize;
   (void)priority;
 
-  if ((funcaddr == NULL) || (nargs > K2023202316_MAX_UARGS)) {
+  /*Lab4 2023202316: Begin*/
+  if ((uint32)funcaddr < (uint32)&k2023202316_usertext ||
+      (uint32)funcaddr >= (uint32)&k2023202316_eusertext ||
+      (nargs > K2023202316_MAX_UARGS)) {
     return SYSERR;
   }
+  /*Lab4 2023202316: End*/
 
   for (i = 0; i < K2023202316_MAX_UARGS; i++) {
     args[i] = 0;
@@ -69,6 +73,7 @@ pid32 k2023202316_create_user_proc(void *funcaddr, uint32 ssize,
 
   if (k2023202316_create_addrspace(pid) == 0 ||
       k2023202316_map_user_stack(pid, K2023202316_USER_STK) == SYSERR) {
+    k2023202316_free_user_space(pid); // Lab4 2023202316
     freestk(kstkbase, K2023202316_KERNEL_STK);
     prptr->prstate = PR_FREE;
     prcount--;

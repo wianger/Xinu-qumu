@@ -42,7 +42,7 @@ DEFS		= 	-DBSDURG -DVERSION=\""`cat $(VERSIONFILE)`"\"
 
 # Compiler flags
 # CFLAGS  = -march=i586 -m32 -ggdb -fno-builtin -fno-stack-protector -nostdlib -c -Wall -O0 ${DEFS} ${INCLUDE}
-CFLAGS  = -march=i586 -m32 -fno-builtin -fno-stack-protector -nostdlib -c -Wall -O0 ${DEFS} ${INCLUDE}
+CFLAGS  = -march=i586 -m32 -fno-builtin -fno-stack-protector -fno-pie -nostdlib -c -Wall -O0 ${DEFS} ${INCLUDE} # Lab4 2023202316
 SFLAGS  = ${INCLUDE}
 
 # Loader flags

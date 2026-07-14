@@ -38,6 +38,8 @@ local void k2023202316_copy_desc(pid32, pid32);
 local char *k2023202316_addr_to_purpose(pid32, uint32);
 local uint32 k2023202316_alloc_low_page(char *, pid32, uint32);
 local bool8 k2023202316_is_kernel_user_mapping(uint32); // Lab6 2023202316
+local bool8 k2023202316_user_entry_valid(uint32);
+local syscall k2023202316_copy_user_name(char *, char *);
 
 /*------------------------------------------------------------------------
  * k2023202316_vm_init - initialize paging and high-memory frame allocator
@@ -83,13 +85,14 @@ void k2023202316_vm_init(void) {
         panic("Lab4 cannot allocate kernel page table");
       }
       memset((void *)pt_phys, 0, K2023202316_PAGE_SIZE);
-      pd[phys >> 22] = pt_phys | K2023202316_PTE_P | K2023202316_PTE_W |
-                        K2023202316_PTE_U;
+      pd[phys >> 22] = pt_phys | K2023202316_PTE_P | K2023202316_PTE_W;
     }
     pt = k2023202316_pt_from_phys(pd[phys >> 22] & K2023202316_PAGE_MASK);
     flags = K2023202316_PTE_P | K2023202316_PTE_W;
-    if ((phys >= (uint32)&text) && (phys < (uint32)&etext)) {
+    if ((phys >= (uint32)&k2023202316_usertext) &&
+        (phys < (uint32)&k2023202316_eusertext)) {
       flags = K2023202316_PTE_P | K2023202316_PTE_U;
+      pd[phys >> 22] |= K2023202316_PTE_U;
     }
     pt[(phys >> 12) & 0x3ff] = phys | flags;
   }
@@ -400,10 +403,14 @@ pid32 k2023202316_lab4_newpid(void) {
 syscall k2023202316_clone_addrspace(pid32 parentpid, pid32 childpid) {
   struct procent *parent;
   struct procent *child;
+  uint32 *pd;
+  uint32 pdi;
+  uint32 pti;
+  uint32 pde;
   uint32 vaddr;
   uint32 pte;
-  uint32 frame;
   uint32 newframe;
+  uint32 flags;
   int32 i;
 
   parent = &proctab[parentpid];
@@ -412,22 +419,32 @@ syscall k2023202316_clone_addrspace(pid32 parentpid, pid32 childpid) {
     return SYSERR;
   }
 
-  for (vaddr = parent->pr2023202316_ustackbase;
-       vaddr < parent->pr2023202316_ustacktop; vaddr += K2023202316_PAGE_SIZE) {
-    pte = k2023202316_lookup_page(parent->pr2023202316_pdbr, vaddr);
-    if (!(pte & K2023202316_PTE_P)) {
+  /* Clone every private user mapping, including file-backed ELF pages. */
+  for (pdi = K2023202316_UHEAP_BASE >> 22;
+       pdi <= (K2023202316_USTACK_TOP - 1) >> 22; pdi++) {
+    pd = k2023202316_pd_from_phys(parent->pr2023202316_pdbr);
+    pde = pd[pdi];
+    if (!(pde & K2023202316_PTE_P) || !(pde & K2023202316_PTE_U)) {
       continue;
     }
-    frame = pte & K2023202316_PAGE_MASK;
-    newframe = k2023202316_alloc_frame("fork-stack", childpid, vaddr);
-    if (newframe == 0) {
-      return SYSERR;
-    }
-    k2023202316_copy_frame(frame, newframe);
-    if (k2023202316_map_page(child->pr2023202316_pdbr, vaddr, newframe,
-                             K2023202316_PTE_P | K2023202316_PTE_W |
-                                 K2023202316_PTE_U) == SYSERR) {
-      return SYSERR;
+    for (pti = 0; pti < 1024; pti++) {
+      vaddr = (pdi << 22) | (pti << 12);
+      pte = k2023202316_lookup_page(parent->pr2023202316_pdbr, vaddr);
+      if (!(pte & K2023202316_PTE_P) || !(pte & K2023202316_PTE_U)) {
+        continue;
+      }
+      newframe = k2023202316_alloc_frame(
+          k2023202316_addr_to_purpose(parentpid, vaddr), childpid, vaddr);
+      if (newframe == 0) {
+        return SYSERR;
+      }
+      k2023202316_copy_frame(pte & K2023202316_PAGE_MASK, newframe);
+      flags = pte & K2023202316_PAGE_OFFSET;
+      if (k2023202316_map_page(child->pr2023202316_pdbr, vaddr, newframe,
+                               flags) == SYSERR) {
+        k2023202316_free_frame(newframe, "fork-map", childpid, vaddr);
+        return SYSERR;
+      }
     }
   }
   child->pr2023202316_ustacktop = parent->pr2023202316_ustacktop;
@@ -440,29 +457,6 @@ syscall k2023202316_clone_addrspace(pid32 parentpid, pid32 childpid) {
 
   for (i = 0; i < K2023202316_MAX_UALLOCS; i++) {
     child->pr2023202316_uallocs[i] = parent->pr2023202316_uallocs[i];
-    if (!parent->pr2023202316_uallocs[i].used) {
-      continue;
-    }
-    for (vaddr = parent->pr2023202316_uallocs[i].base;
-         vaddr < parent->pr2023202316_uallocs[i].base +
-                     parent->pr2023202316_uallocs[i].npages *
-                         K2023202316_PAGE_SIZE;
-         vaddr += K2023202316_PAGE_SIZE) {
-      pte = k2023202316_lookup_page(parent->pr2023202316_pdbr, vaddr);
-      if (!(pte & K2023202316_PTE_P)) {
-        return SYSERR;
-      }
-      newframe = k2023202316_alloc_frame("fork-heap", childpid, vaddr);
-      if (newframe == 0) {
-        return SYSERR;
-      }
-      k2023202316_copy_frame(pte & K2023202316_PAGE_MASK, newframe);
-      if (k2023202316_map_page(child->pr2023202316_pdbr, vaddr, newframe,
-                               K2023202316_PTE_P | K2023202316_PTE_W |
-                                   K2023202316_PTE_U) == SYSERR) {
-        return SYSERR;
-      }
-    }
   }
   return OK;
 }
@@ -581,6 +575,7 @@ pid32 k2023202316_fork_from_trapframe(struct k2023202316_trapframe *tf) {
   k2023202316_copy_desc(currpid, childpid);
 
   if (k2023202316_clone_addrspace(currpid, childpid) == SYSERR) {
+    k2023202316_free_user_space(childpid);
     freestk(kstkbase, K2023202316_KERNEL_STK);
     child->prstate = PR_FREE;
     prcount--;
@@ -623,11 +618,15 @@ syscall k2023202316_exec_from_trapframe(struct k2023202316_trapframe *tf,
                                         char *name, uint32 nargs,
                                         uint32 *args) {
   uint32 user_args[K2023202316_MAX_UARGS];
+  char kernel_name[PNMLEN];
   uint32 newsp;
   uint32 i;
 
-  if ((funcaddr == NULL) || (priority < 1) ||
+  if (!k2023202316_user_entry_valid((uint32)funcaddr) || (priority < 1) ||
       (nargs > K2023202316_MAX_UARGS)) {
+    return SYSERR;
+  }
+  if (k2023202316_copy_user_name(name, kernel_name) == SYSERR) {
     return SYSERR;
   }
   for (i = 0; i < nargs; i++) {
@@ -641,7 +640,7 @@ syscall k2023202316_exec_from_trapframe(struct k2023202316_trapframe *tf,
   if (newsp == 0) {
     return SYSERR;
   }
-  k2023202316_set_name(&proctab[currpid], name);
+  k2023202316_set_name(&proctab[currpid], kernel_name);
   proctab[currpid].prprio = priority;
   k2023202316_switch_addrspace(currpid);
   tf->eip = (uint32)funcaddr;
@@ -656,10 +655,12 @@ void *k2023202316_user_malloc(uint32 nbytes) {
   uint32 base;
   uint32 frame;
   uint32 i;
+  uint32 j;
   int32 slot;
 
   prptr = &proctab[currpid];
-  if (!prptr->pr2023202316_isuser || nbytes == 0) {
+  if (!prptr->pr2023202316_isuser || nbytes == 0 ||
+      nbytes > K2023202316_UHEAP_LIMIT - K2023202316_UHEAP_BASE) {
     return (void *)SYSERR;
   }
   npages = k2023202316_round_page(nbytes) / K2023202316_PAGE_SIZE;
@@ -681,14 +682,16 @@ void *k2023202316_user_malloc(uint32 nbytes) {
     frame = k2023202316_alloc_frame("user-heap", currpid,
                                     base + i * K2023202316_PAGE_SIZE);
     if (frame == 0) {
-      return (void *)SYSERR;
+      goto rollback;
     }
     k2023202316_zero_frame(frame);
     if (k2023202316_map_page(prptr->pr2023202316_pdbr,
                              base + i * K2023202316_PAGE_SIZE, frame,
                              K2023202316_PTE_P | K2023202316_PTE_W |
                                  K2023202316_PTE_U) == SYSERR) {
-      return (void *)SYSERR;
+      k2023202316_free_frame(frame, "user-heap", currpid,
+                             base + i * K2023202316_PAGE_SIZE);
+      goto rollback;
     }
   }
   prptr->pr2023202316_uallocs[slot].base = base;
@@ -696,6 +699,13 @@ void *k2023202316_user_malloc(uint32 nbytes) {
   prptr->pr2023202316_uallocs[slot].used = TRUE;
   prptr->pr2023202316_uheapnext += npages * K2023202316_PAGE_SIZE;
   return (void *)base;
+
+rollback:
+  for (j = 0; j < i; j++) {
+    k2023202316_unmap_page(currpid, base + j * K2023202316_PAGE_SIZE, TRUE,
+                           "user-heap");
+  }
+  return (void *)SYSERR;
 }
 
 syscall k2023202316_user_free(void *ptr) {
@@ -725,21 +735,21 @@ syscall k2023202316_user_free(void *ptr) {
 syscall k2023202316_getpname(pid32 pid, char *buf, uint32 len) {
   char tmp[PNMLEN];
   uint32 n;
+  uint32 copylen;
 
   if ((pid < 0) || (pid >= NPROC) || (buf == NULL) || (len == 0)) {
     return SYSERR;
   }
-  for (n = 0; n < PNMLEN; n++) {
+  memset(tmp, 0, sizeof(tmp));
+  copylen = len < PNMLEN ? len : PNMLEN;
+  for (n = 0; n + 1 < copylen; n++) {
     tmp[n] = proctab[pid].prname[n];
     if (tmp[n] == NULLCH) {
       break;
     }
   }
-  tmp[PNMLEN - 1] = NULLCH;
-  if (len > PNMLEN) {
-    len = PNMLEN;
-  }
-  return k2023202316_copy_to_user(currpid, (uint32)buf, tmp, len);
+  tmp[copylen - 1] = NULLCH;
+  return k2023202316_copy_to_user(currpid, (uint32)buf, tmp, copylen);
 }
 
 int32 k2023202316_page_fault_handler(struct k2023202316_trapframe *tf,
@@ -767,6 +777,7 @@ int32 k2023202316_page_fault_handler(struct k2023202316_trapframe *tf,
     if (k2023202316_map_page(prptr->pr2023202316_pdbr, vaddr, frame,
                              K2023202316_PTE_P | K2023202316_PTE_W |
                                  K2023202316_PTE_U) == SYSERR) {
+      k2023202316_free_frame(frame, "stack-grow", currpid, vaddr);
       return FALSE;
     }
     prptr->pr2023202316_ustackbase = vaddr;
@@ -975,7 +986,8 @@ local syscall k2023202316_copy_bytes(pid32 pid, uint32 dst, uint32 src,
       chunk = nbytes - done;
     }
     pte = k2023202316_lookup_page(proctab[pid].pr2023202316_pdbr, uaddr);
-    if (!(pte & K2023202316_PTE_P)) {
+    if (!(pte & K2023202316_PTE_P) || !(pte & K2023202316_PTE_U) ||
+        (to_user && !(pte & K2023202316_PTE_W))) {
       return SYSERR;
     }
     mapped = (uint8 *)k2023202316_kmap(pte & K2023202316_PAGE_MASK, 0);
@@ -1053,3 +1065,27 @@ local bool8 k2023202316_is_kernel_user_mapping(uint32 vaddr) {
   return vaddr < K2023202316_UHEAP_BASE || vaddr >= K2023202316_USTACK_TOP;
 }
 /*Lab6 2023202316: End*/
+
+local bool8 k2023202316_user_entry_valid(uint32 entry) {
+  return entry >= (uint32)&k2023202316_usertext &&
+         entry < (uint32)&k2023202316_eusertext;
+}
+
+local syscall k2023202316_copy_user_name(char *name, char *dst) {
+  uint32 i;
+
+  if (name == NULL || dst == NULL) {
+    return SYSERR;
+  }
+  for (i = 0; i < PNMLEN - 1; i++) {
+    if (k2023202316_copy_from_user(currpid, &dst[i], (uint32)&name[i], 1) ==
+        SYSERR) {
+      return SYSERR;
+    }
+    if (dst[i] == NULLCH) {
+      return OK;
+    }
+  }
+  dst[PNMLEN - 1] = NULLCH;
+  return OK;
+}

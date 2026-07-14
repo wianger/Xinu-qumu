@@ -19,6 +19,7 @@ shellcmd xsh_lab4(int nargs, char *args[]) {
   int32 x;
   status result;
   pid32 pid;
+  volatile uint32 spin;
   char pname[PNMLEN];
 
   pid = u2023202316_getpid();
@@ -28,7 +29,12 @@ shellcmd xsh_lab4(int nargs, char *args[]) {
                      pname, u2023202316_getcpl(), &x);
 
   result = OK;
-  if (nargs == 2 && strncmp(args[1], "1", 2) == 0) {
+  if (nargs == 2 && strncmp(args[1], "map", 4) == 0) {
+    u2023202316_printf("[lab4 map] inspect QEMU 'info mem' now\n");
+    for (spin = 0; spin < 500000000; spin++) {
+      asm volatile("" : : : "memory");
+    }
+  } else if (nargs == 2 && strncmp(args[1], "1", 2) == 0) {
     result = u2023202316_fork_test();
   } else if (nargs == 2 && strncmp(args[1], "2", 2) == 0) {
     result = u2023202316_exec_test();

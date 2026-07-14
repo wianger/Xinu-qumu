@@ -30,6 +30,10 @@ extern void *maxheap;         /* Highest valid heap address	*/
 
 extern int text;  /* Start of text segment	*/
 extern int etext; /* End of text segment		*/
+/*Lab4 2023202316: Begin*/
+extern int k2023202316_usertext;
+extern int k2023202316_eusertext;
+/*Lab4 2023202316: End*/
 extern int data;  /* Start of data segment	*/
 extern int edata; /* End of data segment		*/
 extern int bss;   /* Start of bss segment		*/

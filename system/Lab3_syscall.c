@@ -14,6 +14,7 @@ int32 k2023202316_syscall_dispatch(struct k2023202316_trapframe *tf) {
   uint32 a4;
   uint32 a5;
   uint32 kargv[K2023202316_MAX_UARGS + 1];
+  char kname[PNMLEN]; // Lab4 2023202316
   uint32 nargs;
   uint32 i;
 
@@ -44,32 +45,44 @@ int32 k2023202316_syscall_dispatch(struct k2023202316_trapframe *tf) {
             SYSERR) {
       return SYSERR;
     }
+    /*Lab4 2023202316: Begin*/
+    for (i = 0; i < PNMLEN - 1; i++) {
+      if (k2023202316_copy_from_user(currpid, &kname[i], a4 + i, 1) ==
+          SYSERR) {
+        return SYSERR;
+      }
+      if (kname[i] == NULLCH) {
+        break;
+      }
+    }
+    kname[PNMLEN - 1] = NULLCH;
     nargs = kargv[0];
     switch (nargs) {
     case 0:
       return k2023202316_create_user_proc((void *)a1, a2, (pri16)a3,
-                                          (char *)a4, 0);
+                                          kname, 0);
     case 1:
       return k2023202316_create_user_proc((void *)a1, a2, (pri16)a3,
-                                          (char *)a4, 1, kargv[1]);
+                                          kname, 1, kargv[1]);
     case 2:
       return k2023202316_create_user_proc((void *)a1, a2, (pri16)a3,
-                                          (char *)a4, 2, kargv[1], kargv[2]);
+                                          kname, 2, kargv[1], kargv[2]);
     case 3:
       return k2023202316_create_user_proc((void *)a1, a2, (pri16)a3,
-                                          (char *)a4, 3, kargv[1], kargv[2],
+                                          kname, 3, kargv[1], kargv[2],
                                           kargv[3]);
     case 4:
       return k2023202316_create_user_proc((void *)a1, a2, (pri16)a3,
-                                          (char *)a4, 4, kargv[1], kargv[2],
+                                          kname, 4, kargv[1], kargv[2],
                                           kargv[3], kargv[4]);
     case 5:
       return k2023202316_create_user_proc((void *)a1, a2, (pri16)a3,
-                                          (char *)a4, 5, kargv[1], kargv[2],
+                                          kname, 5, kargv[1], kargv[2],
                                           kargv[3], kargv[4], kargv[5]);
     default:
       return SYSERR;
     }
+    /*Lab4 2023202316: End*/
 
   case K2023202316_SYS_RESUME:
     return resume((pid32)a1);

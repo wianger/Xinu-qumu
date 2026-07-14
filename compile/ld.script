@@ -7,11 +7,32 @@ SECTIONS
   . = ALIGN(4096);              /* Accommodate bad physbase             */
   .text : {
     text = ABSOLUTE(.);         /* text: beginning of text segment      */
-    *(.text .text.*)            /* asm text, then C text                */
-    *(.rodata .rodata.*)        /* asm and C read-only data             */
+    /*Lab4 2023202316: Begin*/
+    binaries/start.o(.text .text.*)
+    *(EXCLUDE_FILE (binaries/Lab3_userlib.o binaries/xsh_lab3.o
+                    binaries/xsh_lab4.o binaries/xsh_lab5.o
+                    binaries/xsh_lab6.o binaries/fdoprnt.o
+                    binaries/strncmp.o) .text .text.*)
+    *(EXCLUDE_FILE (binaries/Lab3_userlib.o binaries/xsh_lab3.o
+                    binaries/xsh_lab4.o binaries/xsh_lab5.o
+                    binaries/xsh_lab6.o binaries/fdoprnt.o
+                    binaries/strncmp.o) .rodata .rodata.*)
     etext = ABSOLUTE(.) ;       /* etext: end of text                   */
     . = ALIGN(4096);
   }
+  .usertext : {
+    k2023202316_usertext = ABSOLUTE(.); /* start of built-in user code   */
+    binaries/Lab3_userlib.o(.text .text.* .rodata .rodata.*)
+    binaries/xsh_lab3.o(.text .text.* .rodata .rodata.*)
+    binaries/xsh_lab4.o(.text .text.* .rodata .rodata.*)
+    binaries/xsh_lab5.o(.text .text.* .rodata .rodata.*)
+    binaries/xsh_lab6.o(.text .text.* .rodata .rodata.*)
+    binaries/fdoprnt.o(.text .text.* .rodata .rodata.*)
+    binaries/strncmp.o(.text .text.* .rodata .rodata.*)
+    k2023202316_eusertext = ABSOLUTE(.); /* end of built-in user code    */
+    . = ALIGN(4096);
+  }
+  /*Lab4 2023202316: End*/
   .data :
   {
     data = ABSOLUTE(.);         /* data: beginning of data segment      */
