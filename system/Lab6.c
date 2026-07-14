@@ -172,7 +172,8 @@ local status k2023202316_fs_read_bytes(uint32 off, void *buf, uint32 count) {
   uint32 soff;
   uint32 chunk;
 
-  if (off + count > K2023202316_FS_IMAGE_SIZE) {
+  if (off > K2023202316_FS_IMAGE_SIZE ||
+      count > K2023202316_FS_IMAGE_SIZE - off) {
     return SYSERR;
   }
   dst = (uint8 *)buf;
@@ -199,7 +200,8 @@ local status k2023202316_fs_write_bytes(uint32 off, void *buf, uint32 count) {
   uint32 soff;
   uint32 chunk;
 
-  if (off + count > K2023202316_FS_IMAGE_SIZE) {
+  if (off > K2023202316_FS_IMAGE_SIZE ||
+      count > K2023202316_FS_IMAGE_SIZE - off) {
     return SYSERR;
   }
   src = (uint8 *)buf;
@@ -263,6 +265,10 @@ local status k2023202316_fs_get_dir(uint32 index, uint32 entsize,
     memcpy(ent->name, raw + 16, K2023202316_FS_NAME_LEN);
   }
   ent->name[K2023202316_FS_NAME_LEN - 1] = NULLCH;
+  if (ent->offset > K2023202316_FS_IMAGE_SIZE ||
+      ent->size > K2023202316_FS_IMAGE_SIZE - ent->offset) {
+    return SYSERR;
+  }
   return OK;
 }
 
@@ -309,7 +315,8 @@ local status k2023202316_read_elf_image(char *name, char **image_out,
   struct k2023202316_fs_dirent ent;
   char *image;
 
-  if (k2023202316_fs_find(name, &ent) == SYSERR || ent.size < sizeof(struct elfhdr)) {
+  if (k2023202316_fs_find(name, &ent) == SYSERR ||
+      ent.size < sizeof(struct elfhdr)) {
     return SYSERR;
   }
   image = getmem(ent.size);
@@ -329,6 +336,7 @@ local status k2023202316_validate_elf_image(char *image, uint32 image_size,
                                             uint32 *entry) {
   struct elfhdr *elf;
   struct proghdr *ph;
+  bool8 entry_loaded;
   uint32 i;
 
   if (image == NULL || image_size < sizeof(struct elfhdr)) {
@@ -336,21 +344,36 @@ local status k2023202316_validate_elf_image(char *image, uint32 image_size,
   }
   elf = (struct elfhdr *)image;
   if (elf->magic != ELF_MAGIC || elf->phentsize != sizeof(struct proghdr) ||
-      elf->phoff + elf->phnum * elf->phentsize > image_size ||
+      elf->phoff > image_size ||
+      elf->phnum > (image_size - elf->phoff) / elf->phentsize ||
       elf->entry < K2023202316_ELF_BASE ||
       elf->entry >= K2023202316_ELF_LIMIT) {
     return SYSERR;
   }
+  entry_loaded = FALSE;
   for (i = 0; i < elf->phnum; i++) {
     ph = (struct proghdr *)(image + elf->phoff + i * elf->phentsize);
     if (ph->type != ELF_PROG_LOAD) {
       continue;
     }
-    if (ph->memsz < ph->filesz || ph->off + ph->filesz > image_size ||
+    if (ph->memsz == 0) {
+      if (ph->filesz != 0) {
+        return SYSERR;
+      }
+      continue;
+    }
+    if (ph->memsz < ph->filesz || ph->off > image_size ||
+        ph->filesz > image_size - ph->off ||
         ph->vaddr < K2023202316_ELF_BASE ||
-        ph->vaddr + ph->memsz > K2023202316_ELF_LIMIT) {
+        ph->memsz > K2023202316_ELF_LIMIT - ph->vaddr) {
       return SYSERR;
     }
+    if (elf->entry >= ph->vaddr && elf->entry < ph->vaddr + ph->memsz) {
+      entry_loaded = TRUE;
+    }
+  }
+  if (!entry_loaded) {
+    return SYSERR;
   }
   *entry = elf->entry;
   return OK;
@@ -371,6 +394,9 @@ local syscall k2023202316_map_elf_image(pid32 pid, char *image,
   for (i = 0; i < elf->phnum; i++) {
     ph = (struct proghdr *)(image + elf->phoff + i * elf->phentsize);
     if (ph->type != ELF_PROG_LOAD) {
+      continue;
+    }
+    if (ph->memsz == 0) {
       continue;
     }
     start = ph->vaddr & K2023202316_PAGE_MASK;

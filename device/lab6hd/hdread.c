@@ -21,6 +21,7 @@
 #define K2023202316_ATA_CMD_READ 0x20
 
 local status k2023202316_hd_wait_ready(void);
+local status k2023202316_hd_wait_irq(void);
 extern status k2023202316_hd_xfer(struct dentry *, void *, uint32, bool8);
 
 /*------------------------------------------------------------------------
@@ -50,6 +51,7 @@ status k2023202316_hd_xfer(struct dentry *devptr, void *buff, uint32 blk,
   }
 
   wait(k2023202316_hd.lock);
+  semreset(k2023202316_hd.done, 0);
   mask = disable();
   if (k2023202316_hd_wait_ready() == SYSERR) {
     restore(mask);
@@ -85,11 +87,17 @@ status k2023202316_hd_xfer(struct dentry *devptr, void *buff, uint32 blk,
       outw(K2023202316_ATA_DATA, data[i]);
     }
     restore(mask);
-    wait(k2023202316_hd.done);
+    if (k2023202316_hd_wait_irq() == SYSERR) {
+      signal(k2023202316_hd.lock);
+      return SYSERR;
+    }
   } else {
     outb(K2023202316_ATA_CMD, K2023202316_ATA_CMD_READ);
     restore(mask);
-    wait(k2023202316_hd.done);
+    if (k2023202316_hd_wait_irq() == SYSERR) {
+      signal(k2023202316_hd.lock);
+      return SYSERR;
+    }
     mask = disable();
     status = inb(K2023202316_ATA_STATUS);
     if (status & (K2023202316_ATA_SR_ERR | K2023202316_ATA_SR_DF)) {
@@ -113,12 +121,32 @@ local status k2023202316_hd_wait_ready(void) {
   uint32 limit;
   uint8 status;
 
-  for (limit = 0; limit < K2023202316_HD_TIMEOUT; limit++) {
+  for (limit = 0; limit < K2023202316_HD_READY_TIMEOUT; limit++) {
     status = inb(K2023202316_ATA_STATUS);
     if (!(status & K2023202316_ATA_SR_BSY) &&
         (status & K2023202316_ATA_SR_RDY)) {
       return OK;
     }
   }
+  return SYSERR;
+}
+
+local status k2023202316_hd_wait_irq(void) {
+  uint32 elapsed;
+  intmask mask;
+
+  for (elapsed = 0; elapsed < K2023202316_HD_IRQ_TIMEOUT_MS; elapsed++) {
+    if (!k2023202316_hd.waiting) {
+      wait(k2023202316_hd.done);
+      return k2023202316_hd.error ? SYSERR : OK;
+    }
+    sleepms(1);
+  }
+
+  mask = disable();
+  k2023202316_hd.waiting = FALSE;
+  k2023202316_hd.error = TRUE;
+  semreset(k2023202316_hd.done, 0);
+  restore(mask);
   return SYSERR;
 }

@@ -126,8 +126,8 @@ syscall u2023202316_writefile(char *name, char *buf, uint32 len) {
 }
 
 syscall u2023202316_execfile(char *name, uint32 argc, char **argv) {
-  return u2023202316_syscall(K2023202316_SYS_EXECFILE, (uint32)name, argc,
-                             (uint32)argv, 0, 0);
+  return u2023202316_syscall(K2023202316_SYS_EXEC, 0, argc, (uint32)name,
+                             (uint32)argv, 0);
 }
 /*Lab6 2023202316: End*/
 
