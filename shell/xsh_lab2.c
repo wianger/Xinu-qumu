@@ -29,17 +29,17 @@ local status k2023202316_run_exec_demo(void);
 local void k2023202316_invoke(void *, uint32, int32, int32, int32, int32,
                               int32);
 local char *k2023202316_build_stack(char *, uint32, void *, uint32, int32[]);
-local process u2023202316_delay_worker(int32, void *, uint32, int32, int32,
+local process k2023202316_delay_worker(int32, void *, uint32, int32, int32,
                                        int32, int32, int32);
-local process u2023202316_fork_helper(pid32, uint32);
-local process u2023202316_fork_placeholder(void);
+local process k2023202316_fork_helper(pid32, uint32);
+local process k2023202316_fork_placeholder(void);
 local process k2023202316_exec_bootstrap(char *, uint32, void *, uint32, int32,
                                          int32, int32, int32, int32);
-local process u2023202316_fork_case(void);
-local process u2023202316_exec_case(void);
-local process u2023202316_exec_target(int32, int32);
-local void u2023202316_delay_test(int32, int32, int32);
-local void u2023202316_delay_test_one(int32);
+local process k2023202316_fork_case(void);
+local process k2023202316_exec_case(void);
+local process k2023202316_exec_target(int32, int32);
+local void k2023202316_delay_test(int32, int32, int32);
+local void k2023202316_delay_test_one(int32);
 
 /*------------------------------------------------------------------------
  * xsh_lab2 - run experiment 2 demonstrations
@@ -112,7 +112,7 @@ syscall k2023202316_delay_runv(int32 seconds, void *func, uint32 nargs, ...) {
   }
   va_end(ap);
 
-  pid = create((void *)u2023202316_delay_worker, K2023202316_DELAY_STACK,
+  pid = create((void *)k2023202316_delay_worker, K2023202316_DELAY_STACK,
                proctab[currpid].prprio, "lab2-delay", 8, seconds, func, nargs,
                args[0], args[1], args[2], args[3], args[4]);
   if (pid == SYSERR) {
@@ -129,9 +129,8 @@ syscall k2023202316_delay_runv(int32 seconds, void *func, uint32 nargs, ...) {
  * k2023202316_fork - clone the current execution context onto a new stack
  *
  * a short-lived helper runs after the caller has been context-switched once,
- * copies the saved stack segment, and repairs the saved ebp chain so the child
- * can continue from the same call path. It intentionally does not scan stack
- * contents and rewrite pointer-like integers.
+ * copies the saved stack segment, and repairs stack-relative pointers so the
+ * child can continue from the same call path with an independent stack.
  *------------------------------------------------------------------------
  */
 pid32 k2023202316_fork(void) {
@@ -148,7 +147,7 @@ pid32 k2023202316_fork(void) {
 
   helper_prio = proctab[currpid].prprio + 1;
   helper =
-      create((void *)u2023202316_fork_helper, K2023202316_FORK_HELPER_STACK,
+      create((void *)k2023202316_fork_helper, K2023202316_FORK_HELPER_STACK,
              helper_prio, "lab2-forkh", 2, currpid, (uint32)&state);
   if (helper == SYSERR) {
     semdelete(state.done);
@@ -265,15 +264,15 @@ local status k2023202316_run_all(void) {
 local status k2023202316_run_delay_demo(void) {
   printf("\n[lab2] delay_run demo\n");
   printf("xsh_lab2(1): %d.%d\n", clktime, count1000);
-  if (k2023202316_delay_run(2, u2023202316_delay_test, 11, 22, 33) == SYSERR) {
+  if (k2023202316_delay_run(2, k2023202316_delay_test, 11, 22, 33) == SYSERR) {
     printf("delay_run call 1 failed\n");
     return SYSERR;
   }
-  if (k2023202316_delay_run(4, u2023202316_delay_test_one, 44) == SYSERR) {
+  if (k2023202316_delay_run(4, k2023202316_delay_test_one, 44) == SYSERR) {
     printf("delay_run call 2 failed\n");
     return SYSERR;
   }
-  if (k2023202316_delay_run(6, u2023202316_delay_test, 55, 66, 77) == SYSERR) {
+  if (k2023202316_delay_run(6, k2023202316_delay_test, 55, 66, 77) == SYSERR) {
     printf("delay_run call 3 failed\n");
     return SYSERR;
   }
@@ -291,7 +290,7 @@ local status k2023202316_run_fork_demo(void) {
 
   printf("\n[lab2] fork demo\n");
   recvclr();
-  pid = create((void *)u2023202316_fork_case, K2023202316_DELAY_STACK,
+  pid = create((void *)k2023202316_fork_case, K2023202316_DELAY_STACK,
                proctab[currpid].prprio, "lab2-fork", 0);
   if (pid == SYSERR) {
     printf("cannot start fork case\n");
@@ -313,7 +312,7 @@ local status k2023202316_run_exec_demo(void) {
 
   printf("\n[lab2] exec demo\n");
   recvclr();
-  pid = create((void *)u2023202316_exec_case, K2023202316_DELAY_STACK,
+  pid = create((void *)k2023202316_exec_case, K2023202316_DELAY_STACK,
                proctab[currpid].prprio, "lab2-exec", 0);
   if (pid == SYSERR) {
     printf("cannot start exec case\n");
@@ -507,10 +506,10 @@ local char *k2023202316_build_stack(char *stkbase, uint32 ssize, void *funcaddr,
 }
 
 /*------------------------------------------------------------------------
- * u2023202316_delay_worker - sleep and then invoke the target callback
+ * k2023202316_delay_worker - sleep and then invoke the target callback
  *------------------------------------------------------------------------
  */
-local process u2023202316_delay_worker(int32 seconds, void *func, uint32 nargs,
+local process k2023202316_delay_worker(int32 seconds, void *func, uint32 nargs,
                                        int32 a1, int32 a2, int32 a3, int32 a4,
                                        int32 a5) {
   sleep(seconds);
@@ -519,10 +518,10 @@ local process u2023202316_delay_worker(int32 seconds, void *func, uint32 nargs,
 }
 
 /*------------------------------------------------------------------------
- * u2023202316_fork_helper - clone the parent stack into a new process
+ * k2023202316_fork_helper - clone the parent stack into a new process
  *------------------------------------------------------------------------
  */
-local process u2023202316_fork_helper(pid32 parentpid, uint32 state_addr) {
+local process k2023202316_fork_helper(pid32 parentpid, uint32 state_addr) {
   intmask mask;
   struct procent *parent;
   struct procent *child;
@@ -540,7 +539,7 @@ local process u2023202316_fork_helper(pid32 parentpid, uint32 state_addr) {
   parent = &proctab[parentpid];
   parent_state = (struct k2023202316_fork_state *)state_addr;
 
-  childpid = create((void *)u2023202316_fork_placeholder, parent->prstklen,
+  childpid = create((void *)k2023202316_fork_placeholder, parent->prstklen,
                     parent->prprio, parent->prname, 0);
   if (childpid == SYSERR) {
     parent_state->childpid = SYSERR;
@@ -567,6 +566,14 @@ local process u2023202316_fork_helper(pid32 parentpid, uint32 state_addr) {
   }
 
   k2023202316_fix_ebp_chain(parent_low, parent_high, child_low, used);
+  for (i = 0; i < used / sizeof(uint32); i++) {
+    uint32 *word;
+
+    word = (uint32 *)(child_low + i * sizeof(uint32));
+    if (*word >= parent_low && *word < parent_high) {
+      *word += child_low - parent_low;
+    }
+  }
 
   offset = state_addr - parent_low;
   child_state = (struct k2023202316_fork_state *)(child_low + offset);
@@ -581,10 +588,10 @@ local process u2023202316_fork_helper(pid32 parentpid, uint32 state_addr) {
 }
 
 /*------------------------------------------------------------------------
- * u2023202316_fork_placeholder - should never run if cloning succeeds
+ * k2023202316_fork_placeholder - should never run if cloning succeeds
  *------------------------------------------------------------------------
  */
-local process u2023202316_fork_placeholder(void) { return OK; }
+local process k2023202316_fork_placeholder(void) { return OK; }
 
 /*------------------------------------------------------------------------
  * k2023202316_exec_bootstrap - free the old stack and run new code
@@ -600,10 +607,10 @@ local process k2023202316_exec_bootstrap(char *oldstkbase, uint32 oldstklen,
 }
 
 /*------------------------------------------------------------------------
- * u2023202316_fork_case - verify fork return values and names
+ * k2023202316_fork_case - verify fork return values and names
  *------------------------------------------------------------------------
  */
-local process u2023202316_fork_case(void) {
+local process k2023202316_fork_case(void) {
   pid32 pid;
 
   pid = k2023202316_fork();
@@ -620,15 +627,15 @@ local process u2023202316_fork_case(void) {
 }
 
 /*------------------------------------------------------------------------
- * u2023202316_exec_case - verify fork followed by exec
+ * k2023202316_exec_case - verify fork followed by exec
  *------------------------------------------------------------------------
  */
-local process u2023202316_exec_case(void) {
+local process k2023202316_exec_case(void) {
   pid32 pid;
 
   pid = k2023202316_fork();
   if (pid == 0) {
-    k2023202316_exec((void *)u2023202316_exec_target,
+    k2023202316_exec((void *)k2023202316_exec_target,
                      proctab[currpid].prprio + K2023202316_EXEC_PRIO_BONUS,
                      "exec-child", 2, 2023, currpid);
     printf("exec returned unexpectedly in pid %d\n", currpid);
@@ -646,29 +653,29 @@ local process u2023202316_exec_case(void) {
 }
 
 /*------------------------------------------------------------------------
- * u2023202316_exec_target - target used by exec() testing
+ * k2023202316_exec_target - target used by exec() testing
  *------------------------------------------------------------------------
  */
-local process u2023202316_exec_target(int32 a, int32 b) {
+local process k2023202316_exec_target(int32 a, int32 b) {
   printf("exec target: pid=%d, name=%s, args=(%d,%d)\n", currpid,
          proctab[currpid].prname, a, b);
   return OK;
 }
 
 /*------------------------------------------------------------------------
- * u2023202316_delay_test - sample callback for delay_run
+ * k2023202316_delay_test - sample callback for delay_run
  *------------------------------------------------------------------------
  */
-local void u2023202316_delay_test(int32 a, int32 b, int32 c) {
+local void k2023202316_delay_test(int32 a, int32 b, int32 c) {
   printf("delay_test: %d.%d\n", clktime, count1000);
   printf("delay_test args: %d %d %d\n", a, b, c);
 }
 
 /*------------------------------------------------------------------------
- * u2023202316_delay_test_one - alternate callback with one argument
+ * k2023202316_delay_test_one - alternate callback with one argument
  *------------------------------------------------------------------------
  */
-local void u2023202316_delay_test_one(int32 a) {
+local void k2023202316_delay_test_one(int32 a) {
   printf("delay_test: %d.%d\n", clktime, count1000);
   printf("delay_test arg: %d\n", a);
 }
